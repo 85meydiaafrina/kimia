@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petualangan Si Maleo - Integrasi Model Pembelajaran</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #0f382c 0%, #1a5336 50%, #2e7d32 100%);
+            min-height: 100vh;
+            color: #2d3748;
+        }
+
+        .font-game {
+            font-family: 'Fredoka', cursive;
+        }
+
+        /* Glassmorphism & custom styling */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Maleo Animation & Mascot */
+        .maleo-bounce {
+            animation: maleoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes maleoFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(2deg); }
+        }
+
+        .maleo-blink {
+            animation: maleoBlink 4s infinite;
+        }
+
+        @keyframes maleoBlink {
+            0%, 90%, 100% { transform: scaleY(1); }
+            95% { transform: scaleY(0.1); }
+        }
+
+        /* Card styles */
+        .draggable-card {
+            cursor: grab;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .draggable-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .draggable-card:active {
+            cursor: grabbing;
+            transform: scale(0.98);
+        }
+
+        .draggable-card.selected {
+            ring: 4px;
+            ring-color: #f59e0b;
+            transform: scale(1.04);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+        }
+
+        .drop-zone {
+            transition: all 0.2s ease;
+        }
+
+        .drop-zone.drag-over {
+            background-color: rgba(254, 243, 199, 0.8);
+            border-color: #f59e0b;
+            transform: scale(1.01);
+        }
+
+        .correct-card {
+            background-color: #d1fae5 !important;
+            border-color: #10b981 !important;
+            color: #065f46 !important;
+            animation: pulseSuccess 0.5s ease;
+        }
+
+        .wrong-card {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            color: #991b1b !important;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes pulseSuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(30, 126, 75, 0.4);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(30, 126, 75, 0.7);
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen relative overflow-x-hidden pb-8">
+
+    <!-- Sound Effects Script Helper (Web Audio API) -->
+    <script>
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playPop() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+            playCorrect() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                osc.frequency.setValueAtTime(1046.50, now + 0.24); // C6
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.4);
+            }
+            playWrong() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.setValueAtTime(180, now + 0.15);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.35);
+            }
+            playWin() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const notes = [440, 554.37, 659.25, 880, 739.99, 880];
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, now + i * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.12);
+                    osc.stop(now + i * 0.12 + 0.25);
+                });
+            }
+        }
+        const sounds = new SoundFX();
+    </script>
+
+    <!-- Header Navbar -->
+    <header class="w-full bg-emerald-950/80 backdrop-blur-md text-white border-b border-emerald-700/50 sticky top-0 z-40 px-4 py-3 shadow-lg">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="showScreen('home-screen')">
+                <div class="w-10 h-10 bg-amber-400 rounded-full flex items-center justify-center text-emerald-950 text-xl font-bold shadow-inner border-2 border-amber-200">
+                    <i class="fa-solid font-game">M</i>
+                </div>
+                <div>
+                    <h1 class="font-game text-xl sm:text-2xl text-amber-300 tracking-wide leading-tight">Si Maleo Interactive</h1>
+                    <p class="text-xs text-emerald-200 hidden sm:block">Model Pembelajaran PjBL STEM, PBL, & 5E</p>
+                </div>
+            </div>
+
+            <!-- Stats Header (When in game) -->
+            <div id="game-stats-bar" class="hidden flex items-center gap-4 bg-emerald-900/90 px-4 py-1.5 rounded-full border border-emerald-600">
+                <div class="flex items-center gap-1.5 text-amber-300 font-game text-sm sm:text-base">
+                    <i class="fa-solid fa-clock text-amber-400"></i>
+                    <span id="timer-display">00:00</span>
+                </div>
+                <div class="w-px h-4 bg-emerald-700"></div>
+                <div class="flex items-center gap-1.5 text-emerald-100 font-game text-sm sm:text-base">
+                    <i class="fa-solid fa-star text-amber-400"></i>
+                    <span id="score-display">Skor: 0</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="toggleModal('matrix-modal')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition shadow">
+                    <i class="fa-solid fa-book-open text-amber-300"></i>
+                    <span class="hidden sm:inline">Matriks Referensi</span>
+                </button>
+                <button onclick="toggleAudio()" id="audio-btn" class="bg-emerald-800 hover:bg-emerald-700 text-amber-300 p-2 rounded-xl text-sm transition">
+                    <i class="fa-solid fa-volume-high" id="audio-icon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 flex flex-col justify-start">
+
+        <!-- HOME SCREEN -->
+        <section id="home-screen" class="w-full flex flex-col items-center justify-center my-auto py-6">
+            <div class="glass-panel w-full max-w-4xl rounded-3xl p-6 sm:p-10 text-center relative overflow-hidden my-auto">
+                <div class="absolute -top-10 -right-10 w-40 h-40 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+                <!-- Mascot Greeting Visual -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-8">
+                    <!-- SVG Maleo Bird Mascot -->
+                    <div class="relative w-40 h-40 sm:w-48 sm:h-48 maleo-bounce flex-shrink-0">
+                        <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow-xl">
+                            <path d="M 20 180 Q 40 100 100 120 Q 160 140 180 180 Z" fill="#2d6a4f" opacity="0.4"/>
+                            <ellipse cx="100" cy="125" rx="55" ry="45" fill="#1f2937" />
+                            <ellipse cx="100" cy="135" rx="38" ry="32" fill="#fef3c7" />
+                            <path d="M 70 125 Q 100 165 130 125 Z" fill="#fde68a" />
+                            <path d="M 145 120 Q 185 110 170 140 Q 150 135 140 130 Z" fill="#111827" />
+                            <path d="M 148 115 Q 180 95 175 125 Z" fill="#374151" />
+                            <path d="M 55 115 Q 35 140 70 155 Q 80 135 55 115 Z" fill="#111827" />
+                            <path d="M 85 165 L 80 188 M 80 188 L 72 192 M 80 188 L 85 193" stroke="#d97706" stroke-width="5" stroke-linecap="round"/>
+                            <path d="M 115 165 L 120 188 M 120 188 L 112 193 M 120 188 L 126 192" stroke="#d97706" stroke-width="5" stroke-linecap="round"/>
+                            <circle cx="85" cy="75" r="30" fill="#111827" />
+                            <path d="M 70 52 Q 85 22 108 48 Q 90 55 70 52 Z" fill="#0f172a" />
+                            <path d="M 75 50 Q 88 28 102 48 Z" fill="#334155" opacity="0.6"/>
+                            <ellipse cx="75" cy="73" rx="14" ry="12" fill="#fbbf24" />
+                            <circle cx="73" cy="72" r="6" fill="#ffffff" />
+                            <circle cx="72" cy="72" r="3.5" fill="#000000" class="maleo-blink" />
+                            <circle cx="70.5" cy="70.5" r="1.2" fill="#ffffff" />
+                            <path d="M 62 76 L 42 82 L 62 88 Z" fill="#f59e0b" stroke="#d97706" stroke-width="1.5" />
+                            <path d="M 60 40 L 105 32 L 120 48 L 75 56 Z" fill="#047857"/>
+                            <rect x="85" y="45" width="10" height="8" fill="#10b981"/>
+                            <path d="M 105 40 L 115 60" stroke="#fbbf24" stroke-width="2"/>
+                            <circle cx="115" cy="62" r="3" fill="#fbbf24"/>
+                        </svg>
+                    </div>
+
+                    <!-- Welcome Speech Bubble -->
+                    <div class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-md max-w-md text-left relative">
+                        <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-0 h-0 border-t-8 border-t-transparent border-r-[12px] border-r-amber-300 border-b-8 border-b-transparent hidden sm:block"></div>
+                        <h2 class="font-game text-xl text-emerald-900 mb-1 flex items-center gap-2">
+                            <span>Tabea! Saya Maleo Si Pembelajar</span>
+                            <span class="text-2xl">🦜</span>
+                        </h2>
+                        <p class="text-sm text-gray-700 leading-relaxed">
+                            Mari menjelajahi hutan Sulawesi sambil mempelajari <strong>Integrasi Praktik Saintifik Enjinering</strong> pada model <strong>PjBL STEM, PBL, dan 5E</strong>. Pilih mode permainan di bawah untuk mulai!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Mode Selection Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                    <!-- Mode 1 Card -->
+                    <div onclick="startMode(1)" class="group cursor-pointer bg-gradient-to-br from-emerald-50 to-teal-100 hover:from-emerald-100 hover:to-teal-200 border-2 border-emerald-400/80 rounded-2xl p-6 transition-all transform hover:-translate-y-1 hover:shadow-xl text-left flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="bg-emerald-600 text-white font-game text-xs px-3 py-1 rounded-full uppercase tracking-wider">Mode 1</span>
+                                <i class="fa-solid fa-layer-group text-2xl text-emerald-700 group-hover:scale-110 transition"></i>
+                            </div>
+                            <h3 class="font-game text-lg text-emerald-950 mb-2">Urutkan Langkah Model Pembelajaran</h3>
+                            <p class="text-xs text-gray-600 mb-4">
+                                Menyusun & mengelompokkan sintaks/langkah ke dalam kategori model <strong>PjBL STEM, PBL, dan 5E</strong> secara tepat.
+                            </p>
+                        </div>
+                        <div class="flex items-center font-bold text-sm text-emerald-700 group-hover:text-emerald-900">
+                            <span>Mulai Main Mode 1</span>
+                            <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-1 transition"></i>
+                        </div>
+                    </div>
+
+                    <!-- Mode 2 Card -->
+                    <div onclick="startMode(2)" class="group cursor-pointer bg-gradient-to-br from-amber-50 to-orange-100 hover:from-amber-100 hover:to-orange-200 border-2 border-amber-400/80 rounded-2xl p-6 transition-all transform hover:-translate-y-1 hover:shadow-xl text-left flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="bg-amber-600 text-white font-game text-xs px-3 py-1 rounded-full uppercase tracking-wider">Mode 2</span>
+                                <i class="fa-solid fa-diagram-project text-2xl text-amber-700 group-hover:scale-110 transition"></i>
+                            </div>
+                            <h3 class="font-game text-lg text-amber-950 mb-2">Jodohkan Praktik Saintifik Enjinering</h3>
+                            <p class="text-xs text-gray-600 mb-4">
+                                Memetakan 7 Praktik Saintifik Enjinering dengan tahapan model pembelajaran yang tepat sesuai matriks.
+                            </p>
+                        </div>
+                        <div class="flex items-center font-bold text-sm text-amber-800 group-hover:text-amber-950">
+                            <span>Mulai Main Mode 2</span>
+                            <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-1 transition"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="flex flex-wrap items-center justify-center gap-4">
+                    <button onclick="toggleModal('matrix-modal')" class="bg-white/80 hover:bg-white text-emerald-900 border border-emerald-300 font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-table-cells text-emerald-600"></i>
+                        Pelajari Tabel Matriks Integrasi
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- GAME PLAY SCREEN -->
+        <section id="game-screen" class="hidden w-full flex-col gap-4">
+            
+            <!-- Maleo Tip & Game Banner -->
+            <div class="glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-amber-300 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow border border-amber-400">
+                        🦜
+                    </div>
+                    <div>
+                        <h3 id="mode-title" class="font-game text-base sm:text-lg text-emerald-950">Judul Mode</h3>
+                        <p id="maleo-hint-text" class="text-xs sm:text-sm text-emerald-800 font-medium">Petunjuk dari Maleo akan muncul di sini.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button onclick="resetCurrentGame()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 border border-amber-300 transition">
+                        <i class="fa-solid fa-rotate-right"></i> Reset
+                    </button>
+                    <button onclick="showScreen('home-screen')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 border border-gray-300 transition">
+                        <i class="fa-solid fa-house"></i> Menu Utama
+                    </button>
+                </div>
+            </div>
+
+            <!-- MODE 1 CONTAINER: Card Sorting into Categories -->
+            <div id="mode1-container" class="hidden flex-col gap-5">
+                <!-- Drop Zones (Kategori Model) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Column PjBL STEM -->
+                    <div class="glass-panel rounded-2xl p-4 flex flex-col border-t-4 border-t-emerald-600">
+                        <div class="flex justify-between items-center mb-3 pb-2 border-b border-emerald-100">
+                            <h4 class="font-game text-emerald-900 text-base flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                                PjBL STEM
+                            </h4>
+                            <span id="pjbl-count" class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">0/5</span>
+                        </div>
+                        <div id="zone-pjbl" data-category="PjBL STEM" class="drop-zone flex-1 min-h-[220px] rounded-xl border-2 border-dashed border-emerald-300/80 bg-emerald-50/40 p-2 flex flex-col gap-2">
+                            <!-- Dropped cards go here -->
+                        </div>
+                    </div>
+
+                    <!-- Column PBL -->
+                    <div class="glass-panel rounded-2xl p-4 flex flex-col border-t-4 border-t-blue-600">
+                        <div class="flex justify-between items-center mb-3 pb-2 border-b border-blue-100">
+                            <h4 class="font-game text-blue-900 text-base flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                                PBL
+                            </h4>
+                            <span id="pbl-count" class="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">0/4</span>
+                        </div>
+                        <div id="zone-pbl" data-category="PBL" class="drop-zone flex-1 min-h-[220px] rounded-xl border-2 border-dashed border-blue-300/80 bg-blue-50/40 p-2 flex flex-col gap-2">
+                            <!-- Dropped cards go here -->
+                        </div>
+                    </div>
+
+                    <!-- Column 5E -->
+                    <div class="glass-panel rounded-2xl p-4 flex flex-col border-t-4 border-t-amber-600">
+                        <div class="flex justify-between items-center mb-3 pb-2 border-b border-amber-100">
+                            <h4 class="font-game text-amber-900 text-base flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                                Model 5E
+                            </h4>
+                            <span id="e5-count" class="text-xs font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">0/5</span>
+                        </div>
+                        <div id="zone-5e" data-category="5E" class="drop-zone flex-1 min-h-[220px] rounded-xl border-2 border-dashed border-amber-300/80 bg-amber-50/40 p-2 flex flex-col gap-2">
+                            <!-- Dropped cards go here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deck / Deck of Unsorted Cards -->
+                <div class="glass-panel rounded-2xl p-4">
+                    <h4 class="font-game text-sm text-gray-700 mb-3 flex items-center justify-between">
+                        <span><i class="fa-solid fa-hand-pointer text-amber-500 mr-2"></i>Kartu Langkah Pembelajaran (Tarik atau Klik kartu lalu pilih kolom target):</span>
+                        <span id="remaining-m1-cards" class="text-xs text-emerald-800 font-semibold">Tersisa: 14 Kartu</span>
+                    </h4>
+                    <div id="m1-card-pool" class="flex flex-wrap gap-2.5 min-h-[100px] p-2 bg-white/60 rounded-xl border border-gray-200/80 items-center justify-center">
+                        <!-- Cards generated via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE 2 CONTAINER: Matching Scientific Engineering Practice -->
+            <div id="mode2-container" class="hidden flex-col gap-5">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    
+                    <!-- Left: 7 Scientific Engineering Practices -->
+                    <div class="lg:col-span-5 glass-panel rounded-2xl p-4 flex flex-col">
+                        <h4 class="font-game text-emerald-900 text-sm mb-3 pb-2 border-b border-emerald-100 flex items-center gap-2">
+                            <i class="fa-solid fa-gears text-amber-500"></i>
+                            7 Praktik Saintifik Enjinering
+                        </h4>
+                        <div id="m2-practices-list" class="flex flex-col gap-2.5 flex-1">
+                            <!-- Practices list items with drop slots -->
+                        </div>
+                    </div>
+
+                    <!-- Right: Model Steps Pool to Match -->
+                    <div class="lg:col-span-7 glass-panel rounded-2xl p-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-200">
+                                <h4 class="font-game text-emerald-900 text-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-puzzle-piece text-amber-500"></i>
+                                    Pilihan Langkah Model (PjBL, PBL, 5E)
+                                </h4>
+                                <span id="m2-progress" class="text-xs font-bold bg-amber-100 text-amber-900 px-2.5 py-1 rounded-full">0/7 Terjodohkan</span>
+                            </div>
+                            <p class="text-xs text-gray-600 mb-3">Tarik atau klik kartu langkah di bawah untuk memasangkannya dengan Praktik Saintifik Enjinering yang sesuai di sebelah kiri!</p>
+                            
+                            <div id="m2-card-pool" class="flex flex-wrap gap-2 p-3 bg-white/60 rounded-xl border border-gray-200/80 min-h-[220px]">
+                                <!-- Steps cards generated via JS -->
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-emerald-100 flex justify-end">
+                            <button onclick="checkMode2Answers()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-game px-6 py-2.5 rounded-xl text-sm shadow-md transition transform active:scale-95 flex items-center gap-2">
+                                <i class="fa-solid fa-check-circle"></i> Periksa Jawaban
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- MATRIX MODAL (PANDUAN LENGKAP INTEGRASI TANPA ANGKA) -->
+    <div id="matrix-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-panel w-full max-w-4xl max-h-[90vh] rounded-3xl p-5 sm:p-7 flex flex-col overflow-hidden shadow-2xl relative animate-fade-in">
+            <button onclick="toggleModal('matrix-modal')" class="absolute top-4 right-4 w-9 h-9 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center text-gray-700 font-bold transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-4 pb-3 border-b border-emerald-200">
+                <div class="w-10 h-10 bg-emerald-600 text-amber-300 rounded-xl flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-table"></i>
+                </div>
+                <div>
+                    <h2 class="font-game text-lg sm:text-xl text-emerald-950">Matriks Integrasi Praktik Saintifik Enjinering</h2>
+                    <p class="text-xs text-gray-600">Referensi Pembelajaran PjBL STEM, PBL, dan Model 5E</p>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto pr-1">
+                <div class="overflow-x-auto rounded-xl border border-emerald-200 shadow-sm">
+                    <table class="w-full text-xs sm:text-sm text-left border-collapse">
+                        <thead class="bg-gradient-to-r from-emerald-800 to-teal-800 text-white font-game">
+                            <tr>
+                                <th class="p-3 border-b border-emerald-700 w-12 text-center">No</th>
+                                <th class="p-3 border-b border-emerald-700">Praktik Saintifik Enjinering</th>
+                                <th class="p-3 border-b border-emerald-700">PjBL STEM</th>
+                                <th class="p-3 border-b border-emerald-700">PBL</th>
+                                <th class="p-3 border-b border-emerald-700">5E</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-emerald-100 bg-white/90">
+                            <tr class="hover:bg-emerald-50/60 transition">
+                                <td class="p-3 font-bold text-center text-emerald-800">1</td>
+                                <td class="p-3 font-semibold text-gray-800">Bertanya dan Mengidentifikasi Masalah</td>
+                                <td class="p-3 text-emerald-900 bg-emerald-50/30">Merefleksi</td>
+                                <td class="p-3 text-blue-900 bg-blue-50/30">Pendefinisian Masalah</td>
+                                <td class="p-3 text-amber-900 bg-amber-50/30">Engage</td>
+                            </tr>
+                            <tr class="hover:bg-emerald-50/60 transition">
+                                <td class="p-3 font-bold text-center text-emerald-800">2</td>
+                                <td class="p-3 font-semibold text-gray-800">Bertukar Pikiran dalam menentukan solusi</td>
+                                <td class="p-3 text-emerald-900 bg-emerald-50/30">Meneliti</td>
+                                <td class="p-3 text-blue-900 bg-blue-50/30">Diagnosis awal</td>
+                                <td class="p-3 text-amber-900 bg-amber-50/30">Explore</td>
+                            </tr>
+                            <tr class="hover:bg-emerald-50/60 transition">
+                                <td class="p-3 font-bold text-center text-emerald-800">3</td>
+                                <td class="p-3 font-semibold text-gray-800">Mendesain solusi</td>
+                                <td class="p-3 text-emerald-900 bg-emerald-50/30">Mengeksplorasi dan menemukan</td>
+                                <td class="p-3 text-blue-900 bg-blue-50/30">Penelitian/Penyelidikan</td>
+                                <td class="p-3 text-amber-900 bg-amber-50/30">Explain</td>
+                            </tr>
+                            <tr class="hover:bg-emerald-50/60 transition">
+                                <td class="p-3 font-bold text-center text-emerald-800">4</td>
+                                <td class="p-3 font-semibold text-gray-800">Membuat solusi</td>
+                                <td class="p-3 text-emerald-900 bg-emerald-50/30">Mengaplikasikan</td>
+                                <td class="p-3 text-blue-900 bg-blue-50/30">Pemahaman Bersama</td>
+                                <td class="p-3 text-amber-900 bg-amber-50/30">Elaborate</td>
+                            </tr>
+                            <tr class="hover:bg-emerald-50/60 transition">
+                                <td class="p-3 font-bold text-center text-emerald-800">5</td>
+                                <td class="p-3 font-semibold text-gray-800">Menguji dan mengidentifikasi</td>
+                                <td class="p-3 text-emerald-900 bg-emerald-50/30">Mengomunikasikan</td>
+                                <td class="p-3 text-gray-400 italic bg-blue-50/10">-</td>
+                                <td class="p-3 text-amber-900 bg-amber-50/30">Evaluate</td>
+                            </tr>
+                            <tr class="hover:bg-emerald-50/60 transition">
+                                <td class="p-3 font-bold text-center text-emerald-800">6</td>
+                                <td class="p-3 font-semibold text-gray-800">Mendesain Ulang</td>
+                                <td class="p-3 text-gray-400 italic bg-emerald-50/10">-</td>
+                                <td class="p-3 text-gray-400 italic bg-blue-50/10">-</td>
+                                <td class="p-3 text-gray-400 italic bg-amber-50/10">-</td>
+                            </tr>
+                            <tr class="hover:bg-emerald-50/60 transition">
+                                <td class="p-3 font-bold text-center text-emerald-800">7</td>
+                                <td class="p-3 font-semibold text-gray-800">Mengomunikasikan</td>
+                                <td class="p-3 text-gray-400 italic bg-emerald-50/10">-</td>
+                                <td class="p-3 text-gray-400 italic bg-blue-50/10">-</td>
+                                <td class="p-3 text-gray-400 italic bg-amber-50/10">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
+                    <i class="fa-solid fa-lightbulb text-amber-600 text-sm mt-0.5"></i>
+                    <div>
+                        <strong>Tips Maleo:</strong> Pelajari matriks integrasi ini untuk menghubungkan Praktik Saintifik Enjinering dengan langkah model pembelajaran yang sesuai!
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-gray-200 flex justify-end">
+                <button onclick="toggleModal('matrix-modal')" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2 rounded-xl text-xs sm:text-sm transition">
+                    Mengerti & Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VICTORY MODAL -->
+    <div id="victory-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-6 text-center shadow-2xl relative animate-bounce-in">
+            <div class="w-20 h-20 mx-auto bg-amber-300 rounded-full flex items-center justify-center text-4xl shadow-lg border-2 border-amber-400 mb-3 maleo-bounce">
+                🦜
+            </div>
+
+            <h2 class="font-game text-2xl text-emerald-950 mb-1">Luar Biasa! 🎉</h2>
+            <p id="victory-subtitle" class="text-xs text-gray-600 mb-4">Kamu berhasil menyelesaikan permainan dengan sangat baik!</p>
+
+            <!-- Star Rating Display -->
+            <div id="star-rating" class="flex justify-center gap-2 text-3xl mb-4 text-amber-400">
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+                <i class="fa-solid fa-star"></i>
+            </div>
+
+            <!-- Stats Box -->
+            <div class="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 mb-6 flex justify-around">
+                <div>
+                    <span class="block text-xs text-gray-500 uppercase tracking-wider">Waktu</span>
+                    <span id="final-time" class="font-game text-lg text-emerald-900">00:00</span>
+                </div>
+                <div class="w-px bg-emerald-200"></div>
+                <div>
+                    <span class="block text-xs text-gray-500 uppercase tracking-wider">Skor Akhir</span>
+                    <span id="final-score" class="font-game text-lg text-amber-600">0</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2.5">
+                <button onclick="restartCurrentGame()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-game py-3 rounded-xl text-sm shadow-lg transition">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> Main Lagi
+                </button>
+                <button onclick="showScreen('home-screen')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-game py-2.5 rounded-xl text-sm border border-amber-300 transition">
+                    <i class="fa-solid fa-house mr-1"></i> Kembali ke Menu Utama
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STRUCTURES (TANPA ANGKA DI LANGKAH PEMBELAJARAN) ---
+        
+        // Mode 1 Master Data: Steps to Category
+        const MODE1_CARDS = [
+            // PjBL STEM
+            { id: 'pjbl1', text: 'Merefleksi', category: 'PjBL STEM', code: 'PjBL' },
+            { id: 'pjbl2', text: 'Meneliti', category: 'PjBL STEM', code: 'PjBL' },
+            { id: 'pjbl3', text: 'Mengeksplorasi dan menemukan', category: 'PjBL STEM', code: 'PjBL' },
+            { id: 'pjbl4', text: 'Mengaplikasikan', category: 'PjBL STEM', code: 'PjBL' },
+            { id: 'pjbl5', text: 'Mengomunikasikan', category: 'PjBL STEM', code: 'PjBL' },
+            
+            // PBL
+            { id: 'pbl1', text: 'Pendefinisian Masalah', category: 'PBL', code: 'PBL' },
+            { id: 'pbl2', text: 'Diagnosis awal', category: 'PBL', code: 'PBL' },
+            { id: 'pbl3', text: 'Penelitian/Penyelidikan', category: 'PBL', code: 'PBL' },
+            { id: 'pbl4', text: 'Pemahaman Bersama', category: 'PBL', code: 'PBL' },
+            
+            // 5E
+            { id: 'e51', text: 'Engage', category: '5E', code: '5E' },
+            { id: 'e52', text: 'Explore', category: '5E', code: '5E' },
+            { id: 'e53', text: 'Explain', category: '5E', code: '5E' },
+            { id: 'e54', text: 'Elaborate', category: '5E', code: '5E' },
+            { id: 'e55', text: 'Evaluate', category: '5E', code: '5E' }
+        ];
+
+        // Mode 2 Master Data: Scientific Practices and Correct Associated Model Steps (Tanpa Angka)
+        const MODE2_PRACTICES = [
+            {
+                no: 1,
+                name: 'Bertanya & Mengidentifikasi Masalah',
+                correctMatches: ['Merefleksi', 'Pendefinisian Masalah', 'Engage'],
+                hint: 'Tahap paling awal saat mengawali pembelajaran!'
+            },
+            {
+                no: 2,
+                name: 'Bertukar Pikiran menentukan solusi',
+                correctMatches: ['Meneliti', 'Diagnosis awal', 'Explore'],
+                hint: 'Tahap diskusi awal & eksplorasi ide solusi.'
+            },
+            {
+                no: 3,
+                name: 'Mendesain solusi',
+                correctMatches: ['Mengeksplorasi dan menemukan', 'Penelitian/Penyelidikan', 'Explain'],
+                hint: 'Merancang dan mendalami penjelasan solusi.'
+            },
+            {
+                no: 4,
+                name: 'Membuat solusi',
+                correctMatches: ['Mengaplikasikan', 'Pemahaman Bersama', 'Elaborate'],
+                hint: 'Pengaplikasian, pemahaman mendalam, dan elaborasi produk.'
+            },
+            {
+                no: 5,
+                name: 'Menguji dan mengidentifikasi',
+                correctMatches: ['Mengomunikasikan', 'Evaluate'],
+                hint: 'PjBL Mengomunikasikan & 5E Evaluate.'
+            },
+            {
+                no: 6,
+                name: 'Mendesain Ulang',
+                correctMatches: ['Tidak Ada Khusus / Fleksibel'],
+                hint: 'Praktik perbaikan desain berkelanjutan.'
+            },
+            {
+                no: 7,
+                name: 'Mengomunikasikan',
+                correctMatches: ['Mengomunikasikan', 'Evaluate'],
+                hint: 'Menyampaikan hasil karya & evaluasi akhir.'
+            }
+        ];
+
+        // Step Pool for Mode 2 (Tanpa Angka)
+        const MODE2_STEP_CARDS = [
+            { id: 'm2_1', text: 'Merefleksi', model: 'PjBL STEM' },
+            { id: 'm2_2', text: 'Pendefinisian Masalah', model: 'PBL' },
+            { id: 'm2_3', text: 'Engage', model: '5E' },
+            { id: 'm2_4', text: 'Meneliti', model: 'PjBL STEM' },
+            { id: 'm2_5', text: 'Diagnosis awal', model: 'PBL' },
+            { id: 'm2_6', text: 'Explore', model: '5E' },
+            { id: 'm2_7', text: 'Mengeksplorasi dan menemukan', model: 'PjBL STEM' },
+            { id: 'm2_8', text: 'Penelitian/Penyelidikan', model: 'PBL' },
+            { id: 'm2_9', text: 'Explain', model: '5E' },
+            { id: 'm2_10', text: 'Mengaplikasikan', model: 'PjBL STEM' },
+            { id: 'm2_11', text: 'Elaborate', model: '5E' },
+            { id: 'm2_12', text: 'Evaluate', model: '5E' }
+        ];
+
+        // --- GAME STATE ---
+        let currentMode = 1;
+        let score = 0;
+        let timerSeconds = 0;
+        let timerInterval = null;
+        let selectedCard = null;
+        let isAudioMuted = false;
+
+        function showScreen(screenId) {
+            sounds.playPop();
+            document.getElementById('home-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('game-stats-bar').classList.add('hidden');
+
+            if (screenId === 'home-screen') {
+                document.getElementById('home-screen').classList.remove('hidden');
+                stopTimer();
+            } else if (screenId === 'game-screen') {
+                document.getElementById('game-screen').classList.remove('hidden');
+                document.getElementById('game-stats-bar').classList.remove('hidden');
+            }
+        }
+
+        function toggleModal(modalId) {
+            sounds.playPop();
+            const modal = document.getElementById(modalId);
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            } else {
+                modal.classList.add('opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        }
+
+        function toggleAudio() {
+            isAudioMuted = !isAudioMuted;
+            const icon = document.getElementById('audio-icon');
+            if (isAudioMuted) {
+                icon.className = 'fa-solid fa-volume-xmark text-red-300';
+            } else {
+                icon.className = 'fa-solid fa-volume-high text-amber-300';
+                sounds.playPop();
+            }
+        }
+
+        function startTimer() {
+            stopTimer();
+            timerSeconds = 0;
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
+            const secs = (timerSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${mins}:${secs}`;
+        }
+
+        function updateScore(points) {
+            score += points;
+            if (score < 0) score = 0;
+            document.getElementById('score-display').innerText = `Skor: ${score}`;
+        }
+
+        // Shuffle utility
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function startMode(mode) {
+            currentMode = mode;
+            score = 0;
+            updateScore(0);
+            startTimer();
+            showScreen('game-screen');
+
+            const m1Container = document.getElementById('mode1-container');
+            const m2Container = document.getElementById('mode2-container');
+
+            if (mode === 1) {
+                document.getElementById('mode-title').innerText = 'Mode 1: Urutkan Langkah Model Pembelajaran';
+                document.getElementById('maleo-hint-text').innerText = 'Tarik atau sentuh kartu lalu letakkan ke dalam kelompok model (PjBL STEM, PBL, atau 5E) yang benar!';
+                m1Container.classList.remove('hidden');
+                m1Container.classList.add('flex');
+                m2Container.classList.add('hidden');
+                setupMode1();
+            } else {
+                document.getElementById('mode-title').innerText = 'Mode 2: Jodohkan Praktik Saintifik Enjinering';
+                document.getElementById('maleo-hint-text').innerText = 'Pasangkan kartu langkah model pembelajaran dengan Praktik Saintifik Enjinering yang bersesuaian!';
+                m2Container.classList.remove('hidden');
+                m2Container.classList.add('flex');
+                m1Container.classList.add('hidden');
+                setupMode2();
+            }
+        }
+
+        function setupMode1() {
+            // Reset drop zones
+            const zones = ['pjbl', 'pbl', '5e'];
+            zones.forEach(z => {
+                const el = document.getElementById(`zone-${z}`);
+                el.innerHTML = '';
+            });
+
+            updateM1Counts();
+
+            // Shuffle and render cards
+            const pool = document.getElementById('m1-card-pool');
+            pool.innerHTML = '';
+            
+            const shuffled = shuffleArray(MODE1_CARDS);
+            shuffled.forEach(cardData => {
+                const cardEl = createDraggableCard(cardData);
+                pool.appendChild(cardEl);
+            });
+
+            setupMode1DropZones();
+        }
+
+        function createDraggableCard(cardData) {
+            const card = document.createElement('div');
+            card.className = 'draggable-card glass-card px-3.5 py-2.5 rounded-xl border border-emerald-300/80 bg-white shadow-sm font-semibold text-xs sm:text-sm text-emerald-950 flex items-center justify-between gap-2';
+            card.draggable = true;
+            card.dataset.id = cardData.id;
+            card.dataset.category = cardData.category;
+            card.dataset.text = cardData.text;
+
+            card.innerHTML = `
+                <span>${cardData.text}</span>
+                <i class="fa-solid fa-grip-dots-vertical text-emerald-400 text-xs"></i>
+            `;
+
+            // Drag Events
+            card.addEventListener('dragstart', (e) => {
+                card.classList.add('opacity-50');
+                e.dataTransfer.setData('text/plain', JSON.stringify(cardData));
+                sounds.playPop();
+            });
+
+            card.addEventListener('dragend', () => {
+                card.classList.remove('opacity-50');
+            });
+
+            // Click selection for Mobile / Tap support
+            card.addEventListener('click', () => {
+                handleCardClickSelect(card);
+            });
+
+            return card;
+        }
+
+        function handleCardClickSelect(card) {
+            sounds.playPop();
+            if (selectedCard) {
+                selectedCard.classList.remove('selected');
+            }
+
+            if (selectedCard === card) {
+                selectedCard = null;
+            } else {
+                selectedCard = card;
+                selectedCard.classList.add('selected');
+            }
+        }
+
+        function setupMode1DropZones() {
+            const zones = document.querySelectorAll('#mode1-container .drop-zone');
+            
+            zones.forEach(zone => {
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    zone.classList.add('drag-over');
+                });
+
+                zone.addEventListener('dragleave', () => {
+                    zone.classList.remove('drag-over');
+                });
+
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+                    const cardDataStr = e.dataTransfer.getData('text/plain');
+                    if (!cardDataStr) return;
+                    const cardData = JSON.parse(cardDataStr);
+                    const cardEl = document.querySelector(`[data-id="${cardData.id}"]`);
+                    
+                    if (cardEl) {
+                        evaluateAndPlaceCardM1(cardEl, zone);
+                    }
+                });
+
+                // Click zone to place if card is selected via tap
+                zone.addEventListener('click', () => {
+                    if (selectedCard && selectedCard.parentElement !== zone) {
+                        evaluateAndPlaceCardM1(selectedCard, zone);
+                        selectedCard.classList.remove('selected');
+                        selectedCard = null;
+                    }
+                });
+            });
+        }
+
+        function evaluateAndPlaceCardM1(cardEl, zone) {
+            const targetCategory = zone.dataset.category;
+            const cardCategory = cardEl.dataset.category;
+
+            if (targetCategory === cardCategory) {
+                // Correct Match
+                sounds.playCorrect();
+                cardEl.classList.remove('wrong-card');
+                cardEl.classList.add('correct-card');
+                cardEl.draggable = false;
+                zone.appendChild(cardEl);
+                updateScore(100);
+
+                // Toast Feedback
+                showToast('Tepat sekali! ' + cardEl.dataset.text + ' adalah bagian dari ' + targetCategory, 'success');
+            } else {
+                // Wrong Match
+                sounds.playWrong();
+                cardEl.classList.add('wrong-card');
+                updateScore(-20);
+                setTimeout(() => {
+                    cardEl.classList.remove('wrong-card');
+                }, 800);
+                showToast('Kurang tepat! Coba pelajari matriks referensi.', 'error');
+            }
+
+            updateM1Counts();
+            checkMode1WinCondition();
+        }
+
+        function updateM1Counts() {
+            const pjblCount = document.getElementById('zone-pjbl').children.length;
+            const pblCount = document.getElementById('zone-pbl').children.length;
+            const e5Count = document.getElementById('zone-5e').children.length;
+
+            document.getElementById('pjbl-count').innerText = `${pjblCount}/5`;
+            document.getElementById('pbl-count').innerText = `${pblCount}/4`;
+            document.getElementById('e5-count').innerText = `${e5Count}/5`;
+
+            const poolCount = document.getElementById('m1-card-pool').children.length;
+            document.getElementById('remaining-m1-cards').innerText = `Tersisa: ${poolCount} Kartu`;
+        }
+
+        function checkMode1WinCondition() {
+            const poolCount = document.getElementById('m1-card-pool').children.length;
+            if (poolCount === 0) {
+                triggerVictory();
+            }
+        }
+
+        function setupMode2() {
+            const practiceList = document.getElementById('m2-practices-list');
+            const cardPool = document.getElementById('m2-card-pool');
+
+            practiceList.innerHTML = '';
+            cardPool.innerHTML = '';
+
+            // Render 7 Practices with drop target slots
+            MODE2_PRACTICES.forEach(practice => {
+                const item = document.createElement('div');
+                item.className = 'glass-card p-3 rounded-xl border border-emerald-200/80 bg-white flex flex-col gap-2';
+                item.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-xs sm:text-sm text-emerald-950">${practice.no}. ${practice.name}</span>
+                        <span class="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">Praktik #${practice.no}</span>
+                    </div>
+                    <div id="m2-slot-${practice.no}" data-practice-no="${practice.no}" class="m2-drop-slot drop-zone min-h-[44px] bg-emerald-50/50 border-2 border-dashed border-emerald-300 rounded-lg p-1 flex flex-wrap gap-1 items-center">
+                        <span class="text-gray-400 text-xs italic px-2 placeholder-text">Letakkan kartu di sini...</span>
+                    </div>
+                `;
+                practiceList.appendChild(item);
+            });
+
+            // Shuffle and render Mode 2 Cards
+            const shuffledCards = shuffleArray(MODE2_STEP_CARDS);
+            shuffledCards.forEach(cardData => {
+                const card = document.createElement('div');
+                card.className = 'draggable-card glass-card px-3 py-2 rounded-lg border border-amber-300 bg-amber-50/80 text-amber-950 font-semibold text-xs flex items-center gap-1.5 shadow-sm';
+                card.draggable = true;
+                card.dataset.id = cardData.id;
+                card.dataset.text = cardData.text;
+                card.dataset.model = cardData.model;
+
+                card.innerHTML = `
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <span>${cardData.text}</span>
+                    <span class="text-[9px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded ml-1 font-bold">${cardData.model}</span>
+                `;
+
+                card.addEventListener('dragstart', (e) => {
+                    card.classList.add('opacity-50');
+                    e.dataTransfer.setData('text/plain', JSON.stringify(cardData));
+                    sounds.playPop();
+                });
+
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('opacity-50');
+                });
+
+                card.addEventListener('click', () => {
+                    handleCardClickSelect(card);
+                });
+
+                cardPool.appendChild(card);
+            });
+
+            setupMode2DropZones();
+            updateM2Progress();
+        }
+
+        function setupMode2DropZones() {
+            const slots = document.querySelectorAll('.m2-drop-slot');
+            
+            slots.forEach(slot => {
+                slot.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    slot.classList.add('drag-over');
+                });
+
+                slot.addEventListener('dragleave', () => {
+                    slot.classList.remove('drag-over');
+                });
+
+                slot.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    slot.classList.remove('drag-over');
+                    const cardDataStr = e.dataTransfer.getData('text/plain');
+                    if (!cardDataStr) return;
+                    const cardData = JSON.parse(cardDataStr);
+                    const cardEl = document.querySelector(`[data-id="${cardData.id}"]`);
+
+                    if (cardEl) {
+                        placeCardInSlotM2(cardEl, slot);
+                    }
+                });
+
+                slot.addEventListener('click', () => {
+                    if (selectedCard) {
+                        placeCardInSlotM2(selectedCard, slot);
+                        selectedCard.classList.remove('selected');
+                        selectedCard = null;
+                    }
+                });
+            });
+        }
+
+        function placeCardInSlotM2(cardEl, slot) {
+            sounds.playPop();
+            const placeholder = slot.querySelector('.placeholder-text');
+            if (placeholder) placeholder.style.display = 'none';
+
+            slot.appendChild(cardEl);
+            updateM2Progress();
+        }
+
+        function updateM2Progress() {
+            let filledSlots = 0;
+            for (let i = 1; i <= 7; i++) {
+                const slot = document.getElementById(`m2-slot-${i}`);
+                if (slot && slot.querySelectorAll('.draggable-card').length > 0) {
+                    filledSlots++;
+                }
+            }
+            document.getElementById('m2-progress').innerText = `${filledSlots}/7 Terisi`;
+        }
+
+        function checkMode2Answers() {
+            let totalCorrect = 0;
+            let totalChecked = 0;
+
+            for (let i = 1; i <= 7; i++) {
+                const practice = MODE2_PRACTICES.find(p => p.no === i);
+                const slot = document.getElementById(`m2-slot-${i}`);
+                const cards = slot.querySelectorAll('.draggable-card');
+
+                if (cards.length > 0) {
+                    cards.forEach(card => {
+                        totalChecked++;
+                        const cardText = card.dataset.text;
+                        const isCorrect = practice.correctMatches.includes(cardText);
+
+                        if (isCorrect) {
+                            card.classList.remove('wrong-card');
+                            card.classList.add('correct-card');
+                            totalCorrect++;
+                        } else {
+                            card.classList.remove('correct-card');
+                            card.classList.add('wrong-card');
+                        }
+                    });
+                }
+            }
+
+            if (totalChecked === 0) {
+                sounds.playWrong();
+                showToast('Letakkan setidaknya satu kartu untuk diperiksa!', 'error');
+                return;
+            }
+
+            if (totalCorrect === totalChecked && totalChecked >= 6) {
+                sounds.playCorrect();
+                updateScore(totalCorrect * 150);
+                triggerVictory();
+            } else {
+                sounds.playWrong();
+                updateScore(totalCorrect * 50 - 30);
+                showToast(`${totalCorrect} dari ${totalChecked} kartu tepat! Periksa kartu bergaris merah.`, 'error');
+            }
+        }
+
+        function triggerVictory() {
+            stopTimer();
+            sounds.playWin();
+
+            // Fire Confetti
+            confetti({
+                particleCount: 120,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+
+            // Calculate Stars
+            let stars = 3;
+            if (timerSeconds > 120) stars = 2;
+            if (timerSeconds > 240 || score < 500) stars = 1;
+
+            const starContainer = document.getElementById('star-rating');
+            starContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                if (i < stars) {
+                    starContainer.innerHTML += `<i class="fa-solid fa-star text-amber-400"></i>`;
+                } else {
+                    starContainer.innerHTML += `<i class="fa-regular fa-star text-gray-300"></i>`;
+                }
+            }
+
+            document.getElementById('final-time').innerText = document.getElementById('timer-display').innerText;
+            document.getElementById('final-score').innerText = score;
+
+            toggleModal('victory-modal');
+        }
+
+        function restartCurrentGame() {
+            toggleModal('victory-modal');
+            startMode(currentMode);
+        }
+
+        function resetCurrentGame() {
+            startMode(currentMode);
+        }
+
+        // Floating Toast Notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-emerald-800' : (type === 'error' ? 'bg-rose-800' : 'bg-gray-800');
+            
+            toast.className = `fixed bottom-6 right-6 ${bgColor} text-white text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-2xl z-50 flex items-center gap-2 border border-white/20 transition-all duration-300 transform translate-y-4 opacity-0`;
+            toast.innerHTML = `
+                <i class="fa-solid ${type === 'success' ? 'fa-circle-check text-emerald-300' : 'fa-circle-exclamation text-rose-300'}"></i>
+                <span>${message}</span>
+            `;
+
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 20);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Initialize default view on window load
+        window.onload = function() {
+            showScreen('home-screen');
+        };
+    </script>
+</body>
+</html>
