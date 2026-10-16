@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BioMario: Ekspedisi Virologi - Fase E SMA</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Press Start 2P & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            pixel: ['"Press Start 2P"', 'monospace'],
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            mario: {
+              red: '#E52521',
+              blue: '#0026FF',
+              ground: '#D38A3A',
+              sky: '#5C94FC',
+              pipe: '#00A800',
+              brick: '#B84418'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom retro pixel styling */
+    body {
+      background-color: #0b1120;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .pixel-borders {
+      box-shadow: 
+        inset -4px -4px 0px 0px #374151,
+        inset 4px 4px 0px 0px #9ca3af,
+        0 0 0 3px #111827;
+    }
+    .pixel-btn {
+      box-shadow: 0 5px 0 #991b1b, 0 8px 10px rgba(0,0,0,0.4);
+      transition: all 0.05s ease;
+    }
+    .pixel-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #991b1b, 0 3px 5px rgba(0,0,0,0.4);
+    }
+    canvas {
+      image-rendering: pixelated;
+    }
+    /* Touch controls aesthetic */
+    .touch-btn {
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .touch-btn:active {
+      transform: scale(0.92);
+      filter: brightness(1.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 font-sans flex flex-col justify-between selection:bg-rose-500 selection:text-white overflow-x-hidden">
+
+  <!-- Top Navigation & Live Bio-HUD -->
+  <header class="w-full bg-slate-900/90 border-b-2 border-slate-700 backdrop-blur-md sticky top-0 z-40 px-4 py-2.5">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
+      <!-- Title & Branding -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-rose-600 flex items-center justify-center text-white text-base font-pixel shadow-md border-2 border-white/40">
+          M
+        </div>
+        <div>
+          <h1 class="text-xs md:text-sm font-pixel text-amber-400 tracking-wider">
+            BIO<span class="text-rose-500">MARIO</span>: VIROLOGI
+          </h1>
+          <p class="text-[10px] text-slate-400 hidden sm:block">Biologi Fase E (Kelas X SMA) • Pembelajaran Berbasis HOTS</p>
+        </div>
+      </div>
+
+      <!-- In-Game Stats HUD -->
+      <div class="flex items-center gap-2 md:gap-4 font-pixel text-[10px] md:text-xs">
+        <div class="bg-slate-800/90 border border-slate-700 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-amber-300">
+          <i class="fa-solid fa-coins text-yellow-400"></i>
+          <span id="hud-score">0000</span>
+        </div>
+        <div class="bg-slate-800/90 border border-slate-700 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-rose-400">
+          <i class="fa-solid fa-heart text-rose-500"></i>
+          <span id="hud-lives">3</span>
+        </div>
+        <div class="bg-slate-800/90 border border-slate-700 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-emerald-400 hidden xs:flex">
+          <i class="fa-solid fa-dna text-emerald-400"></i>
+          <span id="hud-hots-count">0/5</span>
+        </div>
+        <button id="btn-open-guide" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded-lg text-[10px] flex items-center gap-1 transition">
+          <i class="fa-solid fa-circle-question"></i>
+          <span class="hidden md:inline">Petunjuk</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="w-full max-w-5xl mx-auto flex-1 flex flex-col items-center justify-center p-2 md:p-4 relative">
+
+    <!-- START / BRIEFING SCREEN (Onboarding) -->
+    <div id="screen-onboarding" class="w-full max-w-xl bg-slate-900/95 border-2 border-amber-500/80 rounded-2xl p-6 shadow-2xl relative z-30">
+      <div class="text-center mb-5">
+        <span class="inline-block py-1 px-3 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full text-xs font-semibold mb-2">
+          Kurikulum Merdeka • Fase E
+        </span>
+        <h2 class="text-xl md:text-2xl font-pixel text-yellow-400 leading-snug">
+          MISI PENYELAMATAN SEL INANG
+        </h2>
+        <p class="text-xs text-slate-300 mt-2 leading-relaxed">
+          Bantu Dr. Mario menembus jaringan seluler yang terinfeksi partikel virus! Pecahkan kotak misteri biologi <strong>HOTS (C4-C5)</strong> untuk mendapatkan antibodi dan memulihkan sel inang.
+        </p>
+      </div>
+
+      <form id="form-start-player" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-300 mb-1.5">Nama Murid</label>
+          <div class="relative">
+            <i class="fa-solid fa-user-astronaut absolute left-3 top-3 text-slate-500 text-sm"></i>
+            <input type="text" id="player-name" required placeholder="Contoh: Zahra Kirana"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-9 pr-3 text-sm text-white focus:outline-none focus:border-amber-400 transition">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-300 mb-1.5">Kelas SMA</label>
+            <div class="relative">
+              <i class="fa-solid fa-school absolute left-3 top-3 text-slate-500 text-sm"></i>
+              <select id="player-class" required
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-9 pr-3 text-sm text-white focus:outline-none focus:border-amber-400 transition">
+                <option value="">Pilih Rombel</option>
+                <option value="X-1">X-1 (Fase E)</option>
+                <option value="X-2">X-2 (Fase E)</option>
+                <option value="X-3">X-3 (Fase E)</option>
+                <option value="X-4">X-4 (Fase E)</option>
+                <option value="X-5">X-5 (Fase E)</option>
+                <option value="X-6">X-6 (Fase E)</option>
+                <option value="X-7">X-7 (Fase E)</option>
+                <option value="X-8">X-8 (Fase E)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-300 mb-1.5">Tingkat Kesulitan</label>
+            <div class="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 px-3 text-xs text-amber-300 flex items-center justify-between">
+              <span>HOTS Biologi Standard</span>
+              <span class="text-emerald-400 font-bold">5 Quests</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-xs space-y-1 text-slate-300">
+          <p class="font-bold text-amber-400"><i class="fa-solid fa-gamepad mr-1"></i> Kontrol Permainan:</p>
+          <p>• <strong>Desktop:</strong> Panah Kanan/Kiri atau A/D untuk bergerak, Spasi / Panah Atas / W untuk melompat.</p>
+          <p>• <strong>Mobile / Tablet:</strong> Tombol D-Pad sentuh dan tombol Lompat (A) pada layar.</p>
+          <p>• Sundul kotak <strong>[?]</strong> dari bawah untuk memicu tantangan soal virus!</p>
+        </div>
+
+        <button type="submit"
+          class="w-full py-3.5 bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white font-pixel text-xs tracking-wider rounded-xl pixel-btn uppercase">
+          Mulai Ekspedisi Mario!
+        </button>
+      </form>
+    </div>
+
+    <!-- GAMEPLAY CANVAS CONTAINER -->
+    <div id="game-container" class="hidden w-full flex flex-col items-center">
+      <!-- Retro Canvas Wrapper -->
+      <div class="relative w-full max-w-[854px] aspect-[16/9] bg-[#5C94FC] rounded-2xl overflow-hidden border-4 border-slate-800 shadow-2xl">
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <!-- In-canvas Level Indicator -->
+        <div class="absolute top-2 left-3 bg-black/60 backdrop-blur-sm px-3 py-1 rounded text-[10px] font-pixel text-yellow-300 border border-yellow-400/40 pointer-events-none">
+          STAGE 1: MIKROSKOPIK VIRUS
+        </div>
+
+        <!-- Pause / Game Over Overlay -->
+        <div id="canvas-overlay" class="hidden absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
+          <h3 id="overlay-title" class="font-pixel text-rose-500 text-xl md:text-2xl mb-2">GAME OVER</h3>
+          <p id="overlay-msg" class="text-xs md:text-sm text-slate-300 max-w-md mb-6 leading-relaxed">
+            Mario terpapar partikel virion! Jangan putus asa, kuatkan pemahaman daur lisogenik dan litik.
+          </p>
+          <button id="btn-overlay-action" class="font-pixel text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 px-6 py-3 rounded-xl pixel-btn uppercase">
+            Coba Lagi
+          </button>
+        </div>
+      </div>
+
+      <!-- MOBILE TOUCH CONTROLS (Adapted for Touchscreens) -->
+      <div id="touch-controls" class="w-full max-w-[854px] mt-3 grid grid-cols-2 gap-4 px-2 select-none md:hidden">
+        <!-- D-Pad Left/Right -->
+        <div class="flex items-center gap-2">
+          <button id="touch-left" class="touch-btn w-16 h-16 bg-slate-800 border-2 border-slate-600 active:bg-rose-700 text-white rounded-2xl flex items-center justify-center text-xl shadow-lg">
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+          <button id="touch-right" class="touch-btn w-16 h-16 bg-slate-800 border-2 border-slate-600 active:bg-rose-700 text-white rounded-2xl flex items-center justify-center text-xl shadow-lg">
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+        <!-- Action Jump Button -->
+        <div class="flex items-center justify-end">
+          <button id="touch-jump" class="touch-btn w-20 h-20 bg-rose-600 border-4 border-rose-400 active:bg-rose-500 text-white rounded-full flex flex-col items-center justify-center shadow-xl">
+            <span class="font-pixel text-sm">LOMPAT</span>
+            <i class="fa-solid fa-arrow-up text-xs mt-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUESTION MODAL (Triggers when hitting a [?] box) -->
+    <div id="modal-question" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="bg-slate-900 border-2 border-amber-400 rounded-2xl max-w-2xl w-full p-5 md:p-7 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+        <!-- Header badge -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-pixel text-xs flex items-center justify-center">?</span>
+            <div>
+              <span class="text-[10px] font-pixel text-amber-400" id="q-category">KOTAK BIOLOGI HOTS</span>
+              <h4 class="text-xs text-slate-400">Analisis Kognitif Daur & Struktur Virus</h4>
+            </div>
+          </div>
+          <span class="text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded">
+            +200 Poin
+          </span>
+        </div>
+
+        <!-- Question Scenario / Stimulus -->
+        <div id="q-stimulus-box" class="mb-4 bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed">
+          <p id="q-stimulus">Memuat studi kasus virologi...</p>
+        </div>
+
+        <!-- Question Text -->
+        <h3 id="q-text" class="text-sm md:text-base font-bold text-white mb-4 leading-normal">
+          Pertanyaan sedang dimuat...
+        </h3>
+
+        <!-- Options Container -->
+        <div id="q-options" class="space-y-2.5 mb-5">
+          <!-- Dynamic Buttons injected here -->
+        </div>
+
+        <!-- Explanation & Feedback Box -->
+        <div id="q-feedback" class="hidden p-4 rounded-xl text-xs leading-relaxed mb-4 border">
+          <h5 id="q-feedback-title" class="font-bold text-sm mb-1"></h5>
+          <p id="q-feedback-desc" class="text-slate-300"></p>
+        </div>
+
+        <!-- Continue Button -->
+        <div class="flex justify-end">
+          <button id="btn-continue-game" class="hidden px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg transition">
+            <span>Lanjutkan Petualangan</span>
+            <i class="fa-solid fa-play"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULT & ANALYTICS DASHBOARD SCREEN -->
+    <div id="screen-dashboard" class="hidden w-full max-w-4xl bg-slate-900/95 border-2 border-emerald-500/80 rounded-2xl p-6 md:p-8 shadow-2xl relative z-30">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-3xl mx-auto mb-3 shadow-lg">
+          <i class="fa-solid fa-trophy"></i>
+        </div>
+        <h2 class="text-xl md:text-2xl font-pixel text-yellow-400">MISI SELESAI: DASHBOARD EVALUASI</h2>
+        <p class="text-xs text-slate-300 mt-1">Laporan Hasil Asesmen Virologi Fase E - Kurikulum Merdeka</p>
+      </div>
+
+      <!-- Student Badge & KPI Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl text-center">
+          <span class="text-[10px] text-slate-400 block font-bold uppercase">Nama Murid</span>
+          <span id="dash-player-name" class="text-sm font-bold text-white truncate block">-</span>
+          <span id="dash-player-class" class="text-[10px] text-amber-400 block">Kelas X</span>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl text-center">
+          <span class="text-[10px] text-slate-400 block font-bold uppercase">Total Skor</span>
+          <span id="dash-final-score" class="text-lg md:text-xl font-pixel text-amber-400">0</span>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl text-center">
+          <span class="text-[10px] text-slate-400 block font-bold uppercase">Akurasi HOTS</span>
+          <span id="dash-accuracy" class="text-lg md:text-xl font-bold text-emerald-400">0%</span>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl text-center">
+          <span class="text-[10px] text-slate-400 block font-bold uppercase">Predikat Kompetensi</span>
+          <span id="dash-grade" class="text-xs md:text-sm font-extrabold text-indigo-400 block mt-1">Virolog Handal</span>
+        </div>
+      </div>
+
+      <!-- Detailed Breakdown Table -->
+      <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden mb-6">
+        <div class="bg-slate-800/80 px-4 py-2.5 text-xs font-bold text-slate-200 border-b border-slate-700 flex justify-between items-center">
+          <span><i class="fa-solid fa-list-check mr-2 text-amber-400"></i>Analisis Butir Soal HOTS</span>
+          <span class="text-[11px] text-slate-400">5 Indikator Capaian</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] border-b border-slate-800">
+              <tr>
+                <th class="py-2.5 px-3">No</th>
+                <th class="py-2.5 px-3">Sub-Materi Virus</th>
+                <th class="py-2.5 px-3">Dimensi Kognitif</th>
+                <th class="py-2.5 px-3">Status Jawaban</th>
+              </tr>
+            </thead>
+            <tbody id="dash-table-body" class="divide-y divide-slate-800/60 font-sans">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Action Buttons (Download & Replay) -->
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <button id="btn-download-report" class="py-3 px-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-emerald-700/30 transition">
+          <i class="fa-solid fa-file-arrow-down"></i>
+          <span>Unduh Laporan Hasil (CSV / Excel)</span>
+        </button>
+        <button id="btn-download-txt" class="py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-lg transition">
+          <i class="fa-solid fa-file-lines"></i>
+          <span>Unduh Rekap Rapor (TXT)</span>
+        </button>
+        <button id="btn-restart-game" class="py-3 px-5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl flex items-center gap-2 border border-slate-700 transition">
+          <i class="fa-solid fa-rotate-right"></i>
+          <span>Mainkan Lagi</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- INSTRUCTION MODAL -->
+    <div id="modal-guide" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-slate-900 border-2 border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+        <button id="btn-close-guide" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <h3 class="font-pixel text-yellow-400 text-sm mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-book-open"></i> PETUNJUK PERMAINAN
+        </h3>
+        <div class="space-y-3 text-xs text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+            <h5 class="font-bold text-amber-400 mb-1">1. Tujuan Misi</h5>
+            <p>Jelajahi dunia sel inang, hindari partikel virus (Bakteriofag & Coronavirus), kumpulkan kapsul materi genetik, dan sundul semua <strong>5 Kotak Misteri [?]</strong> untuk menjawab pertanyaan HOTS.</p>
+          </div>
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+            <h5 class="font-bold text-emerald-400 mb-1">2. Kontrol Fisika Mario</h5>
+            <p>• <strong>Kiri / Kanan:</strong> Tombol [A]/[D] atau [Panah Kiri]/[Panah Kanan].</p>
+            <p>• <strong>Lompat:</strong> Tombol [Spasi], [W], atau [Panah Atas].</p>
+            <p>• <strong>Injak Musuh:</strong> Melompat di atas kepala virus akan melumpuhkannya (+100 Poin)!</p>
+          </div>
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+            <h5 class="font-bold text-rose-400 mb-1">3. Aturan Soal HOTS & Skor</h5>
+            <p>Setiap jawaban benar memberikan <strong>+200 Poin</strong>. Jika salah, Mario kehilangan 1 nyawa namun mendapat penjelasan ilmiah untuk evaluasi belajar.</p>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800 flex justify-end">
+          <button id="btn-guide-ok" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg">
+            Mengerti & Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="w-full bg-slate-950/80 border-t border-slate-800/80 py-2.5 text-center text-[11px] text-slate-500">
+    <p>Media Pembelajaran Berbasis Gamifikasi Sains • Fase E SMA Kurikulum Merdeka &bull; Biologi Virus</p>
+  </footer>
+
+  <script>
+    /* =========================================================================
+     * 1. RETRO WEB AUDIO SYNTHESIZER (NO EXTERNAL ASSETS)
+     * ========================================================================= */
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playSound(type) {
+      if (!audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'jump') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(150, now);
+          osc.frequency.exponentialRampToValueAtTime(450, now + 0.12);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.12);
+
+        } else if (type === 'coin') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(987.77, now); // B5
+          osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+
+        } else if (type === 'box') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.setValueAtTime(600, now + 0.05);
+          osc.frequency.setValueAtTime(900, now + 0.1);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+
+        } else if (type === 'stomp') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.linearRampToValueAtTime(60, now + 0.15);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+
+        } else if (type === 'hit') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(120, now);
+          osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+
+        } else if (type === 'win') {
+          const notes = [523.25, 659.25, 783.99, 1046.50];
+          notes.forEach((freq, idx) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.type = 'square';
+            o.frequency.setValueAtTime(freq, now + idx * 0.1);
+            g.gain.setValueAtTime(0.1, now + idx * 0.1);
+            g.gain.linearRampToValueAtTime(0.01, now + idx * 0.1 + 0.18);
+            o.start(now + idx * 0.1);
+            o.stop(now + idx * 0.1 + 0.18);
+          });
+        }
+      } catch (e) {
+        console.warn("Audio Context silent fallback", e);
+      }
+    }
+
+    /* =========================================================================
+     * 2. HOTS VIRUS QUESTION REPOSITORY (FASE E SMA)
+     * ========================================================================= */
+    const HOTS_QUESTIONS = [
+      {
+        id: 1,
+        topic: "Struktur & Karakteristik Virus",
+        stimulus: "Para ilmuwan memperdebatkan status virus sebagai makhluk hidup atau benda mati. Dalam medium nutrien steril yang kaya karbohidrat dan protein, partikel virus tembakau (TMV) justru mengkristal dan tidak memperbanyak diri sama sekali.",
+        question: "Mengapa virus TMV tidak dapat bereproduksi pada medium nutrien buatan tersebut, dan karakteristik biologis apa yang mendasarinya?",
+        cognitiveLevel: "C4 (Menganalisis)",
+        options: [
+          {
+            text: "Virus adalah parasit obligat intraseluler yang tidak memiliki perangkat metabolik sendiri (seperti ribosom dan enzim sintesis ATP) sehingga mutlak membutuhkan sel inang hidup untuk bereplikasi.",
+            correct: true,
+            explanation: "Tepat sekali! Virus digolongkan sebagai materi peralihan. Di luar sel hidup, virus bersifat aseluler (bukan sel), tidak memiliki organel metabolik (ribosom/mitokondria), dan hanya berupa virion tak aktif yang dapat mengkristal."
+          },
+          {
+            text: "Medium nutrien buatan memiliki konsentrasi garam yang terlalu rendah sehingga dinding sel selulosa virus pecah akibat lisis osmosis.",
+            correct: false,
+            explanation: "Keliru. Virus sama sekali tidak memiliki dinding sel maupun struktur sitoplasma; pembungkus luarnya adalah kapsid protein, bukan selulosa."
+          },
+          {
+            text: "Partikel virus TMV mengalami respirasi anaerob berlebih sehingga menghasilkan asam laktat yang meracuni virionnya sendiri.",
+            correct: false,
+            explanation: "Salah. Virus tidak melakukan respirasi aerob maupun anaerob karena tidak memiliki enzim metabolisme mandiri."
+          },
+          {
+            text: "Materi genetik virus TMV berupa DNA sirkuler beruntai ganda yang menolak menyerap gula dari larutan agar laboratorium.",
+            correct: false,
+            explanation: "Tidak tepat. Materi genetik TMV adalah RNA beruntai tunggal, dan alasan ketiadaan replikasi murni karena ketiadaan sel inang hidup."
+          }
+        ]
+      },
+      {
+        id: 2,
+        topic: "Daur Litik vs Lisogenik",
+        stimulus: "Bakteriophage T4 menginfeksi sel Escherichia coli. Setelah tahap adsorpsi dan penetrasi, pada suatu kondisi DNA virus tidak langsung menghancurkan DNA inang melainkan menyisipkan genomnya ke dalam kromosom bakteri membentuk profag.",
+        question: "Berdasarkan analisis daur replikasi, jika sel bakteri pembawa profag mengalami paparan radiasi ultraviolet secara mendadak, fenomena biologis apa yang akan terjadi selanjutnya?",
+        cognitiveLevel: "C4 (Menganalisis)",
+        options: [
+          {
+            text: "Profag akan terinduksi untuk memisahkan diri dari kromosom inang, mengaktivasi siklus litik, mereplikasi materi virus, merakit virion baru, dan melisiskan sel bakteri.",
+            correct: true,
+            explanation: "Benar! Gangguan fisiologis seperti sinar UV atau stres lingkungan memicu induksi, di mana profag keluar dari kromosom bakteri dan beralih ke daur litik (merusak inang)."
+          },
+          {
+            text: "Sel bakteri akan langsung mengalami pembelahan biner 100 kali lebih cepat untuk menetralisir racun dari radiasi ultraviolet.",
+            correct: false,
+            explanation: "Kurang tepat. Radiasi UV merusak materi genetik inang dan justru memicu transisi ke daur litik, bukan memicu pembelahan bakteri."
+          },
+          {
+            text: "Profag bertransformasi menjadi kapsid kristal permanen dan membuat dinding sel bakteri kebal terhadap segala jenis antibiotik.",
+            correct: false,
+            explanation: "Keliru. Profag adalah untaian asam nukleat, bukan kapsid protein utuh, dan tidak membentuk kristal di dalam kromosom inang."
+          },
+          {
+            text: "Bakteriofag akan mencerna sitoplasma bakteri secara endositosis tanpa merusak membran membran plasma sel.",
+            correct: false,
+            explanation: "Salah konsep. Bakteriofag tidak memiliki kemampuan endositosis; fungsionalnya bergantung pada penetrasi materi genetik via lempeng dasar ekor."
+          }
+        ]
+      },
+      {
+        id: 3,
+        topic: "Spesifisitas Inang & Glikoprotein",
+        stimulus: "Virus Avian Influenza (H5N1) penyebab flu burung pada awalnya hanya menular antarunggas, namun mutasi tertentu pada gen Hemaglutinin (HA) memungkinkan virus berikatan dengan reseptor asam sialat α-2,6 pada saluran napas manusia.",
+        question: "Ditinjau dari biologi molekuler, hubungan antara struktur glikoprotein lonjakan (spike) virus dengan kemampuan transmisi lintas spesies menunjukkan bahwa...",
+        cognitiveLevel: "C5 (Mengevaluasi)",
+        options: [
+          {
+            text: "Spesifisitas infeksi virus ditentukan oleh kecocokan konformasi ruang (lock and key) antara ligan glikoprotein virus dengan protein reseptor spesifik pada membran sel inang.",
+            correct: true,
+            explanation: "Luar biasa! Penetrasi virus sangat selektif. Perubahan beberapa asam amino pada glikoprotein spike akibat mutasi dapat mengubah afinitas reseptor inang baru, memungkinkan transmisi zoonosis."
+          },
+          {
+            text: "Glikoprotein spike berfungsi sebagai flagel mekanis yang menggerakkan virion berenang aktif melawan arus lendir trakea.",
+            correct: false,
+            explanation: "Salah. Virus bersifat non-motil (tidak berenang). Pergerakannya semata-mata bergantung pada difusi fisik pasif di lingkungan."
+          },
+          {
+            text: "Asam sialat adalah antibodi manusia yang secara sengaja mengundang kapsid virus masuk agar dapat dimusnahkan di dalam nukleolus.",
+            correct: false,
+            explanation: "Keliru. Asam sialat adalah molekul permukaan sel epitel normal inang yang dieksploitasi oleh protein virus sebagai pintu masuk infeksi."
+          },
+          {
+            text: "Semua varian virus influenza selalu mampu menginfeksi semua kingdom makhluk hidup tanpa terkecuali karena struktur kapsidnya universal.",
+            correct: false,
+            explanation: "Salah total. Virus sangat spesifik inang (host-specific); virus hewan tidak dapat menginfeksi tumbuhan atau bakteri sembarangan."
+          }
+        ]
+      },
+      {
+        id: 4,
+        topic: "Peranan Menguntungkan Virus (Vektor Vaksin)",
+        stimulus: "Dalam penanganan pandemi modern, para bioteknolog memanfaatkan virus Adenovirus yang telah dihilangkan materi virulennya untuk disisipi gen pengkode glikoprotein target sebagai kandidat vaksin vektor virus.",
+        question: "Mengapa rekayasa genetika memanfaatkan virus sebagai vektor pembawa gen, dan bagaimana mekanisme ini melatih sistem kekebalan tubuh inang?",
+        cognitiveLevel: "C5 (Mengevaluasi)",
+        options: [
+          {
+            text: "Virus memiliki efisiensi alami dalam menembus dan mentransfer materi genetik ke sel inang, sehingga sel tubuh dapat memproduksi antigen asing tanpa menimbulkan penyakit untuk memicu respon antibodi memori.",
+            correct: true,
+            explanation: "Tepat sekali! Kemampuan penetrasi dan transduksi alami virus dimanfaatkan sebagai kurir (vektor) rekayasa genetik yang aman setelah gen patogennya dinonaktifkan."
+          },
+          {
+            text: "Adenovirus bertindak sebagai antibiotik alami yang langsung membunuh bakteri parasit di dalam sirkulasi darah tanpa memerlukan limfosit T.",
+            correct: false,
+            explanation: "Salah. Virus tidak bekerja sebagai antibiotik (antibiotik hanya menyasar bakteri), melainkan sebagai penginduksi respons imunitas adaptif."
+          },
+          {
+            text: "DNA rekombinan Adenovirus akan mengubah sel manusia menjadi sel tumbuhan berklorofil untuk memproduksi energi mandiri.",
+            correct: false,
+            explanation: "Pilihan tidak rasional secara biologis."
+          },
+          {
+            text: "Kapsid Adenovirus membelah diri menjadi sel fagosit yang memakan partikel kotoran di paru-paru.",
+            correct: false,
+            explanation: "Salah. Kapsid adalah selubung protein statis yang terdegradasi setelah materi genetik masuk ke sitosol sel inang."
+          }
+        ]
+      },
+      {
+        id: 5,
+        topic: "Pengendalian & Farmakologi Antivirus",
+        stimulus: "Seorang pasien yang terdiagnosis demam berdarah (DBD akibat virus Dengue) mendesak dokter untuk memberinya resep antibiotik Amoksisilin berdosis tinggi agar virusnya segera musnah.",
+        question: "Berdasarkan prinsip target farmakologi dan struktur organel biologis, tindakan rasional apa yang seharusnya diambil oleh dokter?",
+        cognitiveLevel: "C4 (Menganalisis)",
+        options: [
+          {
+            text: "Menolak pemberian antibiotik karena antibiotik secara selektif menargetkan struktur bakteri (seperti dinding sel peptidoglikan dan ribosom prokariotik) yang tidak dimiliki oleh partikel virus Dengue.",
+            correct: true,
+            explanation: "Sangat tepat! Antibiotik tidak efektif membunuh virus karena virus tidak memiliki dinding sel peptidoglikan maupun sistem metabolisme mandiri yang dihambat antibiotik. Penggunaan serampangan justru memicu resistensi bakteri."
+          },
+          {
+            text: "Menyetujui permintaan pasien karena dosis tinggi amoksisilin dapat memotong materi genetik RNA virus menjadi lipid.",
+            correct: false,
+            explanation: "Keliru. Amoksisilin sama sekali tidak memiliki daya degradasi terhadap asam nukleat maupun kapsid virus."
+          },
+          {
+            text: "Mengganti antibiotik dengan larutan fungisida karena virus Dengue tergolong sebagai hifa jamur mikroskopis.",
+            correct: false,
+            explanation: "Salah taksonomi. Virus adalah entitas biologis aseluler, sangat berbeda dengan Fungi (eukariotik berkitin)."
+          },
+          {
+            text: "Memberikan antibiotik dicampur kalsium agar membran pembungkus virus membeku dalam waktu 24 jam.",
+            correct: false,
+            explanation: "Tidak berdasar secara farmakologis dan ilmiah."
+          }
+        ]
+      }
+    ];
+
+    /* =========================================================================
+     * 3. PLATFORMER ENGINE & GAME STATE
+     * ========================================================================= */
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Virtual Internal Resolution (Retro 16:9 NES/SNES scale)
+    const V_WIDTH = 640;
+    const V_HEIGHT = 360;
+    canvas.width = V_WIDTH;
+    canvas.height = V_HEIGHT;
+
+    const gameState = {
+      playerInfo: { name: "", class: "" },
+      score: 0,
+      lives: 3,
+      currentQuestionIdx: 0,
+      answeredCount: 0,
+      isPaused: false,
+      isGameOver: false,
+      isWon: false,
+      questionLog: [], // Stores analytics for dashboard
+      cameraX: 0
+    };
+
+    // Keyboard Input State
+    const keys = {
+      left: false,
+      right: false,
+      jump: false
+    };
+
+    // Mario Player Object
+    const player = {
+      x: 60,
+      y: 200,
+      width: 20,
+      height: 28,
+      vx: 0,
+      vy: 0,
+      speed: 3.2,
+      jumpForce: -8.8,
+      gravity: 0.42,
+      grounded: false,
+      facingRight: true,
+      invulnerableTimer: 0
+    };
+
+    // Level Terrain Geometry
+    let platforms = [];
+    let mysteryBoxes = [];
+    let enemies = [];
+    let particles = [];
+    let dnaCapsules = [];
+
+    function buildLevel() {
+      platforms = [
+        // Ground floors with strategic pit gaps
+        { x: 0, y: 310, w: 420, h: 50 },
+        { x: 480, y: 310, w: 450, h: 50 },
+        { x: 990, y: 310, w: 500, h: 50 },
+        { x: 1550, y: 310, w: 600, h: 50 },
+
+        // Elevated brick platforms
+        { x: 180, y: 220, w: 90, h: 20, type: 'brick' },
+        { x: 340, y: 170, w: 100, h: 20, type: 'brick' },
+        { x: 620, y: 210, w: 120, h: 20, type: 'brick' },
+        { x: 800, y: 160, w: 100, h: 20, type: 'brick' },
+        { x: 1140, y: 210, w: 140, h: 20, type: 'brick' },
+        { x: 1380, y: 170, w: 120, h: 20, type: 'brick' },
+        { x: 1700, y: 220, w: 160, h: 20, type: 'brick' },
+
+        // Flagpole Base / Win Sanctuary
+        { x: 2050, y: 130, w: 20, h: 180, type: 'pole' },
+        { x: 2020, y: 280, w: 80, h: 30, type: 'castle' }
+      ];
+
+      // Question [?] Blocks corresponding to HOTS Questions
+      mysteryBoxes = [
+        { id: 0, x: 220, y: 150, w: 24, h: 24, hit: false, bounceY: 0 },
+        { id: 1, x: 670, y: 140, w: 24, h: 24, hit: false, bounceY: 0 },
+        { id: 2, x: 840, y: 90, w: 24, h: 24, hit: false, bounceY: 0 },
+        { id: 3, x: 1200, y: 140, w: 24, h: 24, hit: false, bounceY: 0 },
+        { id: 4, x: 1760, y: 150, w: 24, h: 24, hit: false, bounceY: 0 }
+      ];
+
+      // Biological Enemies (Viruses: Bakteriofag & Coronavirus)
+      enemies = [
+        { x: 280, y: 284, w: 24, h: 24, vx: -0.9, type: 'phage', alive: true },
+        { x: 640, y: 184, w: 24, h: 24, vx: 0.8, type: 'corona', alive: true },
+        { x: 740, y: 284, w: 24, h: 24, vx: -1.0, type: 'phage', alive: true },
+        { x: 1180, y: 184, w: 24, h: 24, vx: 0.9, type: 'corona', alive: true },
+        { x: 1280, y: 284, w: 24, h: 24, vx: -1.1, type: 'phage', alive: true },
+        { x: 1620, y: 284, w: 24, h: 24, vx: 1.0, type: 'corona', alive: true },
+        { x: 1840, y: 284, w: 24, h: 24, vx: -1.0, type: 'phage', alive: true }
+      ];
+
+      // Collectible DNA/RNA Bio-Capsules for Bonus Points
+      dnaCapsules = [
+        { x: 190, y: 190, collected: false },
+        { x: 230, y: 190, collected: false },
+        { x: 360, y: 140, collected: false },
+        { x: 640, y: 180, collected: false },
+        { x: 1160, y: 180, collected: false },
+        { x: 1400, y: 140, collected: false },
+        { x: 1720, y: 190, collected: false }
+      ];
+    }
+
+    // Desktop Keyboard Listeners
+    window.addEventListener("keydown", (e) => {
+      if (gameState.isPaused) return;
+      if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
+      if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = true;
+      if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
+        if (!keys.jump && player.grounded) {
+          player.vy = player.jumpForce;
+          player.grounded = false;
+          playSound('jump');
+        }
+        keys.jump = true;
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = false;
+      if (e.code === "ArrowRight" || e.code === "KeyD") keys.right = false;
+      if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") keys.jump = false;
+    });
+
+    // Touch Controls Setup (Mobile/Tablet Friendly)
+    function setupTouchHandlers(btnId, onDown, onUp) {
+      const el = document.getElementById(btnId);
+      if (!el) return;
+      el.addEventListener("touchstart", (e) => { e.preventDefault(); onDown(); }, { passive: false });
+      el.addEventListener("touchend", (e) => { e.preventDefault(); onUp(); }, { passive: false });
+      el.addEventListener("mousedown", (e) => { e.preventDefault(); onDown(); });
+      el.addEventListener("mouseup", (e) => { e.preventDefault(); onUp(); });
+    }
+
+    setupTouchHandlers("touch-left", () => { keys.left = true; }, () => { keys.left = false; });
+    setupTouchHandlers("touch-right", () => { keys.right = true; }, () => { keys.right = false; });
+    setupTouchHandlers("touch-jump", () => {
+      if (player.grounded && !gameState.isPaused) {
+        player.vy = player.jumpForce;
+        player.grounded = false;
+        playSound('jump');
+      }
+    }, () => {});
+
+    function updatePhysics() {
+      if (gameState.isPaused || gameState.isGameOver || gameState.isWon) return;
+
+      // Invulnerability flicker timer
+      if (player.invulnerableTimer > 0) {
+        player.invulnerableTimer--;
+      }
+
+      // Horizontal Motion
+      if (keys.left) {
+        player.vx = -player.speed;
+        player.facingRight = false;
+      } else if (keys.right) {
+        player.vx = player.speed;
+        player.facingRight = true;
+      } else {
+        player.vx *= 0.75;
+        if (Math.abs(player.vx) < 0.1) player.vx = 0;
+      }
+
+      // Apply Gravity
+      player.vy += player.gravity;
+      if (player.vy > 10) player.vy = 10;
+
+      // Move X & Check Platform Collisions
+      player.x += player.vx;
+      if (player.x < 10) player.x = 10;
+
+      // Move Y & Check Platform Collisions
+      player.y += player.vy;
+      player.grounded = false;
+
+      // Collision with Standard Platforms & Ground
+      for (const p of platforms) {
+        if (
+          player.x + player.width > p.x &&
+          player.x < p.x + p.w &&
+          player.y + player.height > p.y &&
+          player.y < p.y + p.h
+        ) {
+          // Landing on top
+          if (player.vy > 0 && (player.y + player.height - player.vy) <= p.y + 10) {
+            player.y = p.y - player.height;
+            player.vy = 0;
+            player.grounded = true;
+          }
+          // Hitting head on bottom of brick
+          else if (player.vy < 0 && (player.y - player.vy) >= p.y + p.h - 8) {
+            player.y = p.y + p.h;
+            player.vy = 0;
+            playSound('hit');
+          }
+        }
+      }
+
+      // Check Collision with Mystery [?] Boxes
+      for (const box of mysteryBoxes) {
+        // Vertical headbutt check (Mario hits box from below)
+        if (
+          player.x + player.width > box.x - 2 &&
+          player.x < box.x + box.w + 2 &&
+          player.y <= box.y + box.h + 5 &&
+          player.y >= box.y &&
+          player.vy < 0
+        ) {
+          player.y = box.y + box.h + 1;
+          player.vy = 1.5;
+
+          if (!box.hit) {
+            box.hit = true;
+            box.bounceY = -8;
+            playSound('box');
+            triggerQuestion(box.id);
+          }
+        }
+
+        // Standing on top of question box
+        if (
+          player.x + player.width > box.x &&
+          player.x < box.x + box.w &&
+          player.y + player.height >= box.y &&
+          player.y + player.height <= box.y + 12 &&
+          player.vy > 0
+        ) {
+          player.y = box.y - player.height;
+          player.vy = 0;
+          player.grounded = true;
+        }
+
+        // Restore box bounce
+        if (box.bounceY < 0) {
+          box.bounceY += 1.5;
+          if (box.bounceY > 0) box.bounceY = 0;
+        }
+      }
+
+      // Collect DNA Bio-Capsules
+      for (const cap of dnaCapsules) {
+        if (!cap.collected && Math.hypot((player.x + 10) - cap.x, (player.y + 14) - cap.y) < 22) {
+          cap.collected = true;
+          gameState.score += 50;
+          updateHUD();
+          playSound('coin');
+          spawnFloatingText("+50 DNA", cap.x, cap.y);
+        }
+      }
+
+      // Enemy Physics & Interaction (Stomping vs Hurt)
+      for (const e of enemies) {
+        if (!e.alive) continue;
+
+        // Enemy patrol movement
+        e.x += e.vx;
+        // Edge turning
+        if (e.x < 100 || e.x > 2000) e.vx *= -1;
+
+        // Bounding box collision with player
+        if (
+          player.x + player.width > e.x &&
+          player.x < e.x + e.w &&
+          player.y + player.height > e.y &&
+          player.y < e.y + e.h
+        ) {
+          // Mario jumps on top of virus (Stomp Kill)
+          if (player.vy > 0 && (player.y + player.height) - e.y < 15) {
+            e.alive = false;
+            player.vy = -6; // Rebound bounce
+            gameState.score += 100;
+            updateHUD();
+            playSound('stomp');
+            spawnFloatingText("+100 LISIS", e.x, e.y);
+          } else if (player.invulnerableTimer === 0) {
+            // Player gets damaged
+            takeDamage();
+          }
+        }
+      }
+
+      // Pit Fall Check (Fall into oblivion)
+      if (player.y > V_HEIGHT + 40) {
+        takeDamage(true);
+      }
+
+      // Win Flagpole Collision Check
+      if (player.x >= 2040 && !gameState.isWon) {
+        handleGameWin();
+      }
+
+      // Smooth Camera Tracking (Keep Mario centered horizontally)
+      const targetCamX = player.x - V_WIDTH * 0.35;
+      gameState.cameraX += (targetCamX - gameState.cameraX) * 0.12;
+      if (gameState.cameraX < 0) gameState.cameraX = 0;
+      if (gameState.cameraX > 1650) gameState.cameraX = 1650;
+    }
+
+    // Damage Penalty and Respawn Logic
+    function takeDamage(instantFall = false) {
+      playSound('hit');
+      gameState.lives--;
+      updateHUD();
+
+      if (gameState.lives <= 0) {
+        triggerGameOver("Semua nyawa Mario habis! Pelajari kembali materi daur virus dan coba lagi.");
+        return;
+      }
+
+      // Knockback and temporary invulnerability
+      player.invulnerableTimer = 80;
+      if (instantFall) {
+        player.x = Math.max(60, player.x - 180);
+        player.y = 150;
+        player.vy = 0;
+      } else {
+        player.vy = -5;
+        player.vx = player.facingRight ? -4 : 4;
+      }
+    }
+
+    // Floating Score Particles
+    function spawnFloatingText(txt, x, y) {
+      particles.push({
+        text: txt,
+        x: x,
+        y: y,
+        vy: -1.2,
+        alpha: 1.0,
+        life: 40
+      });
+    }
+
+    function drawGame() {
+      ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
+      ctx.save();
+      ctx.translate(-Math.floor(gameState.cameraX), 0);
+
+      // 1. Sky & Parallax Cellular Microscopic Background
+      drawCellularBackground();
+
+      // 2. Draw Platforms & Ground
+      for (const p of platforms) {
+        if (p.type === 'brick') {
+          // Mario Brick Block Style
+          ctx.fillStyle = '#B84418';
+          ctx.fillRect(p.x, p.y, p.w, p.h);
+          ctx.strokeStyle = '#3e1607';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(p.x, p.y, p.w, p.h);
+          // Brick Pattern lines
+          ctx.fillStyle = '#00000044';
+          ctx.fillRect(p.x + p.w / 2, p.y, 2, p.h);
+        } else if (p.type === 'pole') {
+          // Flagpole
+          ctx.fillStyle = '#E5E7EB';
+          ctx.fillRect(p.x + 8, p.y, 4, p.h);
+          ctx.fillStyle = '#F59E0B';
+          ctx.beginPath();
+          ctx.arc(p.x + 10, p.y, 8, 0, Math.PI * 2);
+          ctx.fill();
+          // Flag banner
+          ctx.fillStyle = '#10B981';
+          ctx.beginPath();
+          ctx.moveTo(p.x + 12, p.y + 10);
+          ctx.lineTo(p.x + 45, p.y + 24);
+          ctx.lineTo(p.x + 12, p.y + 38);
+          ctx.closePath();
+          ctx.fill();
+        } else if (p.type === 'castle') {
+          // Goal Bio-Base
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(p.x, p.y, p.w, p.h);
+        } else {
+          // Classic Mario Green Top Ground with Soil Below
+          ctx.fillStyle = '#D38A3A'; // Soil
+          ctx.fillRect(p.x, p.y, p.w, p.h);
+          ctx.fillStyle = '#00A800'; // Green Grass Top
+          ctx.fillRect(p.x, p.y, p.w, 10);
+          ctx.fillStyle = '#007A00';
+          ctx.fillRect(p.x, p.y + 10, p.w, 3);
+        }
+      }
+
+      // 3. Draw Mystery [?] Boxes
+      for (const box of mysteryBoxes) {
+        const drawY = box.y + box.bounceY;
+        if (!box.hit) {
+          // Active Question Box: Golden with glowing question mark
+          ctx.fillStyle = '#F59E0B';
+          ctx.fillRect(box.x, drawY, box.w, box.h);
+          ctx.strokeStyle = '#78350F';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(box.x, drawY, box.w, box.h);
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = 'bold 12px "Press Start 2P"';
+          ctx.fillText('?', box.x + 6, drawY + 17);
+        } else {
+          // Inactive / Hit Box: Dark Bronze Empty Block
+          ctx.fillStyle = '#78350F';
+          ctx.fillRect(box.x, drawY, box.w, box.h);
+          ctx.strokeStyle = '#451A03';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(box.x, drawY, box.w, box.h);
+          ctx.fillStyle = '#451A03';
+          ctx.beginPath();
+          ctx.arc(box.x + 12, drawY + 12, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // 4. Draw Collectible DNA Capsules
+      for (const cap of dnaCapsules) {
+        if (!cap.collected) {
+          ctx.save();
+          ctx.translate(cap.x, cap.y);
+          // Glowing capsule pill
+          ctx.fillStyle = '#EC4899';
+          ctx.beginPath();
+          ctx.roundRect(-6, -10, 12, 20, 6);
+          ctx.fill();
+          ctx.fillStyle = '#60A5FA';
+          ctx.fillRect(-6, 0, 12, 10);
+          ctx.restore();
+        }
+      }
+
+      // 5. Draw Virus Mobs
+      for (const e of enemies) {
+        if (e.alive) {
+          drawVirusEnemy(e);
+        }
+      }
+
+      // 6. Draw Player (Doctor / Bio Mario)
+      drawMarioPlayer();
+
+      // 7. Draw Floating Score Text Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const pt = particles[i];
+        pt.y += pt.vy;
+        pt.alpha -= 0.025;
+        ctx.fillStyle = `rgba(255, 235, 59, ${Math.max(0, pt.alpha)})`;
+        ctx.font = '9px "Press Start 2P"';
+        ctx.fillText(pt.text, pt.x, pt.y);
+        if (pt.alpha <= 0) particles.splice(i, 1);
+      }
+
+      ctx.restore();
+    }
+
+    // Microscopic Cell Backdrop Painting
+    function drawCellularBackground() {
+      // Cell fluid gradient
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(gameState.cameraX, 0, V_WIDTH, V_HEIGHT);
+
+      // Microscopic Blood Vessel / Cell Outline silhouettes
+      ctx.fillStyle = '#0284c7';
+      for (let i = 0; i < 8; i++) {
+        const cx = (i * 320) - (gameState.cameraX * 0.3) % 320;
+        ctx.beginPath();
+        ctx.arc(cx + 80, 80, 50, 0, Math.PI * 2);
+        ctx.arc(cx + 240, 160, 70, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Procedural Pixel Art for Mario
+    function drawMarioPlayer() {
+      // Invulnerability flicker
+      if (player.invulnerableTimer > 0 && Math.floor(player.invulnerableTimer / 4) % 2 === 0) {
+        return;
+      }
+
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      if (!player.facingRight) {
+        ctx.scale(-1, 1);
+        ctx.translate(-player.width, 0);
+      }
+
+      // Red Cap
+      ctx.fillStyle = '#E52521';
+      ctx.fillRect(3, 0, 15, 6);
+      ctx.fillRect(6, 2, 14, 5);
+
+      // Face & Nose
+      ctx.fillStyle = '#FBCFE8';
+      ctx.fillRect(5, 7, 12, 8);
+      ctx.fillStyle = '#374151'; // Mustache & Eyes
+      ctx.fillRect(14, 8, 2, 3);
+      ctx.fillRect(10, 11, 7, 3);
+
+      // Doctor Stethoscope / Lab Coat (White & Blue Overalls)
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(4, 15, 12, 7);
+      ctx.fillStyle = '#2563EB'; // Blue overalls
+      ctx.fillRect(5, 20, 10, 5);
+
+      // Shoes
+      ctx.fillStyle = '#78350F';
+      ctx.fillRect(3, 25, 6, 3);
+      ctx.fillRect(11, 25, 6, 3);
+
+      ctx.restore();
+    }
+
+    // Procedural Virus Rendering (Bakteriofag & Coronavirus)
+    function drawVirusEnemy(e) {
+      ctx.save();
+      ctx.translate(e.x, e.y);
+
+      if (e.type === 'phage') {
+        // Icosahedral Head (Bacteriophage)
+        ctx.fillStyle = '#8B5CF6';
+        ctx.beginPath();
+        ctx.moveTo(12, 0);
+        ctx.lineTo(22, 6);
+        ctx.lineTo(18, 14);
+        ctx.lineTo(6, 14);
+        ctx.lineTo(2, 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Collar & Sheath
+        ctx.fillStyle = '#6D28D9';
+        ctx.fillRect(10, 14, 4, 6);
+
+        // Tail fibers (Spider-like legs)
+        ctx.strokeStyle = '#4C1D95';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(10, 20); ctx.lineTo(2, 24);
+        ctx.moveTo(14, 20); ctx.lineTo(22, 24);
+        ctx.stroke();
+
+      } else {
+        // Coronavirus / Influenza Sphere with Spike Glycoproteins
+        ctx.fillStyle = '#EF4444';
+        ctx.beginPath();
+        ctx.arc(12, 12, 9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Radiating Spike Proteins
+        ctx.fillStyle = '#F59E0B';
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+          const sx = 12 + Math.cos(angle) * 11;
+          const sy = 12 + Math.sin(angle) * 11;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function triggerQuestion(qIndex) {
+      gameState.isPaused = true;
+      const qData = HOTS_QUESTIONS[qIndex];
+      gameState.currentQuestionIdx = qIndex;
+
+      document.getElementById("modal-question").classList.remove("hidden");
+      document.getElementById("q-category").textContent = `KOTAK BIOLOGI HOTS #${qIndex + 1} (${qData.topic})`;
+      document.getElementById("q-stimulus").textContent = qData.stimulus;
+      document.getElementById("q-text").textContent = qData.question;
+
+      // Reset feedback box and button
+      const feedbackBox = document.getElementById("q-feedback");
+      feedbackBox.classList.add("hidden");
+      const continueBtn = document.getElementById("btn-continue-game");
+      continueBtn.classList.add("hidden");
+
+      // Render Options
+      const optionsContainer = document.getElementById("q-options");
+      optionsContainer.innerHTML = "";
+      const alphabet = ["A", "B", "C", "D"];
+
+      qData.options.forEach((opt, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-amber-400 text-xs text-slate-200 font-medium transition duration-150 flex items-start gap-3";
+        btn.innerHTML = `
+          <span class="w-6 h-6 rounded-lg bg-slate-900 border border-slate-600 text-amber-400 font-bold flex items-center justify-center text-xs flex-shrink-0">
+            ${alphabet[idx]}
+          </span>
+          <span class="flex-1 leading-relaxed">${opt.text}</span>
+        `;
+        btn.onclick = () => handleAnswerSubmission(idx, btn, qData);
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    function handleAnswerSubmission(selectedIdx, clickedBtn, qData) {
+      const selectedOption = qData.options[selectedIdx];
+      const isCorrect = selectedOption.correct;
+
+      // Lock buttons
+      const allBtns = document.querySelectorAll("#q-options button");
+      allBtns.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add("opacity-60", "cursor-not-allowed");
+      });
+      clickedBtn.classList.remove("opacity-60");
+
+      if (isCorrect) {
+        clickedBtn.classList.add("bg-emerald-950/80", "border-emerald-500", "text-emerald-200");
+        gameState.score += 200;
+        playSound('win');
+        spawnFloatingText("+200 HOTS!", player.x, player.y - 20);
+      } else {
+        clickedBtn.classList.add("bg-rose-950/80", "border-rose-500", "text-rose-200");
+        gameState.lives = Math.max(1, gameState.lives - 1); // Forgive total game over during quiz to encourage learning
+        playSound('hit');
+
+        // Highlight correct
+        qData.options.forEach((opt, idx) => {
+          if (opt.correct) {
+            allBtns[idx].classList.remove("opacity-60");
+            allBtns[idx].classList.add("bg-emerald-950/50", "border-emerald-500/60", "text-emerald-300");
+          }
+        });
+      }
+
+      // Record to Analytics Log
+      gameState.questionLog.push({
+        qNumber: qData.id,
+        topic: qData.topic,
+        cognitive: qData.cognitiveLevel,
+        isCorrect: isCorrect,
+        studentAnswer: selectedOption.text
+      });
+
+      gameState.answeredCount++;
+      updateHUD();
+
+      // Show Pedagogical Feedback
+      const feedbackBox = document.getElementById("q-feedback");
+      const feedbackTitle = document.getElementById("q-feedback-title");
+      const feedbackDesc = document.getElementById("q-feedback-desc");
+
+      feedbackBox.classList.remove("hidden");
+      if (isCorrect) {
+        feedbackBox.className = "p-3.5 rounded-xl text-xs leading-relaxed mb-4 border border-emerald-500/40 bg-emerald-950/40 text-emerald-300";
+        feedbackTitle.innerHTML = '<i class="fa-solid fa-circle-check mr-1.5"></i>Analisis Tepat & Akurat!';
+      } else {
+        feedbackBox.className = "p-3.5 rounded-xl text-xs leading-relaxed mb-4 border border-rose-500/40 bg-rose-950/40 text-rose-300";
+        feedbackTitle.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1.5"></i>Konsep Perlu Diperbaiki:';
+      }
+      feedbackDesc.textContent = selectedOption.explanation;
+
+      // Show Continue Button
+      const continueBtn = document.getElementById("btn-continue-game");
+      continueBtn.classList.remove("hidden");
+      continueBtn.onclick = () => {
+        document.getElementById("modal-question").classList.add("hidden");
+        gameState.isPaused = false;
+      };
+    }
+
+    function updateHUD() {
+      document.getElementById("hud-score").textContent = String(gameState.score).padStart(4, '0');
+      document.getElementById("hud-lives").textContent = gameState.lives;
+      document.getElementById("hud-hots-count").textContent = `${gameState.answeredCount}/5`;
+    }
+
+    function triggerGameOver(msg) {
+      gameState.isGameOver = true;
+      const overlay = document.getElementById("canvas-overlay");
+      overlay.classList.remove("hidden");
+      document.getElementById("overlay-title").textContent = "GAME OVER";
+      document.getElementById("overlay-title").className = "font-pixel text-rose-500 text-xl md:text-2xl mb-2";
+      document.getElementById("overlay-msg").textContent = msg;
+
+      const actionBtn = document.getElementById("btn-overlay-action");
+      actionBtn.textContent = "ULANGI STAGE";
+      actionBtn.onclick = () => {
+        overlay.classList.add("hidden");
+        resetGameVariables();
+      };
+    }
+
+    function handleGameWin() {
+      gameState.isWon = true;
+      playSound('win');
+      setTimeout(() => {
+        showDashboard();
+      }, 700);
+    }
+
+    function showDashboard() {
+      document.getElementById("game-container").classList.add("hidden");
+      document.getElementById("screen-dashboard").classList.remove("hidden");
+
+      // Player Identity
+      document.getElementById("dash-player-name").textContent = gameState.playerInfo.name || "Murid";
+      document.getElementById("dash-player-class").textContent = `Kelas: ${gameState.playerInfo.class || "X"}`;
+      document.getElementById("dash-final-score").textContent = gameState.score;
+
+      // Calculate accuracy
+      const correctAnswers = gameState.questionLog.filter(q => q.isCorrect).length;
+      const totalAnswered = gameState.questionLog.length || 1;
+      const accuracy = Math.round((correctAnswers / totalAnswered) * 100);
+      document.getElementById("dash-accuracy").textContent = `${accuracy}%`;
+
+      // Determine pedagogical predicate
+      let predicate = "Perlu Penguatan Konsep";
+      let colorClass = "text-amber-400";
+      if (accuracy >= 80) {
+        predicate = "Virolog Muda Unggul (Sangat Mahir)";
+        colorClass = "text-emerald-400";
+      } else if (accuracy >= 60) {
+        predicate = "Praktisi Virologi Terampil (Cakap)";
+        colorClass = "text-indigo-400";
+      }
+      const gradeEl = document.getElementById("dash-grade");
+      gradeEl.textContent = predicate;
+      gradeEl.className = `text-xs md:text-sm font-extrabold block mt-1 ${colorClass}`;
+
+      // Populate Detailed Breakdown Table
+      const tbody = document.getElementById("dash-table-body");
+      tbody.innerHTML = "";
+
+      HOTS_QUESTIONS.forEach((q, idx) => {
+        const log = gameState.questionLog.find(l => l.qNumber === q.id);
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-900/60";
+
+        const isOk = log ? log.isCorrect : false;
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-pixel text-amber-400">${idx + 1}</td>
+          <td class="py-2.5 px-3 font-semibold text-slate-200">${q.topic}</td>
+          <td class="py-2.5 px-3 text-slate-400">${q.cognitiveLevel}</td>
+          <td class="py-2.5 px-3">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+              isOk ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40' : 'bg-rose-950/80 text-rose-300 border border-rose-500/40'
+            }">
+              <i class="fa-solid ${isOk ? 'fa-check' : 'fa-xmark'}"></i>
+              ${isOk ? 'Tuntas' : 'Perlu Remediasi'}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Export Reports (CSV for Teachers, TXT for Students)
+    function downloadReportCSV() {
+      const p = gameState.playerInfo;
+      const correctAnswers = gameState.questionLog.filter(q => q.isCorrect).length;
+      const totalAnswered = gameState.questionLog.length;
+      const accuracy = Math.round((correctAnswers / totalAnswered) * 100);
+
+      let csv = "LAPORAN ASESMEN BIOLOGI VIRUS - MARIO FASE E\n";
+      csv += `Nama Siswa,${p.name}\n`;
+      csv += `Kelas,${p.class}\n`;
+      csv += `Waktu Pengerjaan,${new Date().toLocaleString('id-ID')}\n`;
+      csv += `Total Skor,${gameState.score}\n`;
+      csv += `Akurasi HOTS,${accuracy}%\n\n`;
+
+      csv += "No,Sub-Materi,Dimensi Kognitif,Hasil\n";
+      HOTS_QUESTIONS.forEach((q, i) => {
+        const log = gameState.questionLog.find(l => l.qNumber === q.id);
+        const status = log ? (log.isCorrect ? "BENAR" : "SALAH") : "TIDAK TERJAWAB";
+        csv += `${i + 1},"${q.topic}",${q.cognitiveLevel},${status}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `BioMario_Nilai_${p.name.replace(/\s+/g, '_')}_${p.class}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function downloadReportTXT() {
+      const p = gameState.playerInfo;
+      const correctAnswers = gameState.questionLog.filter(q => q.isCorrect).length;
+      const totalAnswered = gameState.questionLog.length;
+
+      let txt = "========================================================\n";
+      txt += "       RAPOR HASIL ASESMEN VIROLOGI KELAS X SMA         \n";
+      txt += "             GIM EDUKASI INTERAKTIF BIOMARIO            \n";
+      txt += "========================================================\n\n";
+      txt += `Nama Siswa      : ${p.name}\n`;
+      txt += `Kelas / Fase    : ${p.class} / Fase E (Kurikulum Merdeka)\n`;
+      txt += `Tanggal         : ${new Date().toLocaleDateString('id-ID')}\n`;
+      txt += `Skor Total      : ${gameState.score} XP\n`;
+      txt += `Soal HOTS Benar : ${correctAnswers} dari 5 Soal\n\n`;
+      txt += "---------------- EVALUASI PER INDIKATOR ----------------\n";
+
+      HOTS_QUESTIONS.forEach((q, i) => {
+        const log = gameState.questionLog.find(l => l.qNumber === q.id);
+        const status = log ? (log.isCorrect ? "[V] TUNTAS" : "[X] BELUM TUNTAS") : "[-] LEWAT";
+        txt += `${i + 1}. ${q.topic} (${q.cognitiveLevel}) : ${status}\n`;
+      });
+
+      txt += "\nCatatan Guru:\n";
+      txt += "Siswa telah menyelesaikan simulasi pemahaman daur replikasi,\norganologi virion, dan peranan bioteknologi virus.\n";
+      txt += "========================================================\n";
+
+      const blob = new Blob([txt], { type: "text/plain;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Rapor_BioMario_${p.name.replace(/\s+/g, '_')}.txt`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Reset Engine State for Replay
+    function resetGameVariables() {
+      gameState.score = 0;
+      gameState.lives = 3;
+      gameState.isGameOver = false;
+      gameState.isWon = false;
+      gameState.isPaused = false;
+      gameState.answeredCount = 0;
+      gameState.questionLog = [];
+      gameState.cameraX = 0;
+
+      player.x = 60;
+      player.y = 200;
+      player.vx = 0;
+      player.vy = 0;
+      player.grounded = false;
+      player.invulnerableTimer = 0;
+
+      buildLevel();
+      updateHUD();
+    }
+
+    // Start Screen Form Submission
+    document.getElementById("form-start-player").addEventListener("submit", (e) => {
+      e.preventDefault();
+      initAudio();
+
+      const name = document.getElementById("player-name").value.trim();
+      const cls = document.getElementById("player-class").value;
+
+      if (!name || !cls) return;
+
+      gameState.playerInfo.name = name;
+      gameState.playerInfo.class = cls;
+
+      document.getElementById("screen-onboarding").classList.add("hidden");
+      document.getElementById("game-container").classList.remove("hidden");
+
+      resetGameVariables();
+      playSound('win');
+    });
+
+    // Guide Modal Listeners
+    document.getElementById("btn-open-guide").addEventListener("click", () => {
+      document.getElementById("modal-guide").classList.remove("hidden");
+    });
+    document.getElementById("btn-close-guide").addEventListener("click", () => {
+      document.getElementById("modal-guide").classList.add("hidden");
+    });
+    document.getElementById("btn-guide-ok").addEventListener("click", () => {
+      document.getElementById("modal-guide").classList.add("hidden");
+    });
+
+    // Dashboard Action Listeners
+    document.getElementById("btn-download-report").addEventListener("click", downloadReportCSV);
+    document.getElementById("btn-download-txt").addEventListener("click", downloadReportTXT);
+    document.getElementById("btn-restart-game").addEventListener("click", () => {
+      document.getElementById("screen-dashboard").classList.add("hidden");
+      document.getElementById("game-container").classList.remove("hidden");
+      resetGameVariables();
+    });
+
+    // Main 60 FPS Game Loop
+    function gameLoop() {
+      updatePhysics();
+      drawGame();
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.onload = function() {
+      buildLevel();
+      gameLoop();
+    };
+  </script>
+</body>
+</html>
