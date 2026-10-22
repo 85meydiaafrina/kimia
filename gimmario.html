@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Petualangan Tekanan IPA - Gim Interaktif Kelas 9</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            touch-action: manipulation;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        .font-game {
+            font-family: 'Fredoka One', cursive;
+        }
+        .game-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            border: 4px solid #4ADE80;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .btn-custom {
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 0 #15803D;
+        }
+        .btn-custom:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #15803D;
+        }
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.4);
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+        }
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-2 sm:p-4">
+
+    <!-- Registration / Start Screen -->
+    <div id="start-screen" class="w-full max-w-lg game-card rounded-3xl p-6 sm:p-8 my-auto text-center z-20">
+        <div class="inline-block bg-yellow-300 border-4 border-yellow-500 rounded-2xl px-6 py-2 mb-4 transform -rotate-2">
+            <span class="text-xs sm:text-sm font-bold text-yellow-900 tracking-wider uppercase">IPA Kelas 9 SMP</span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-game text-emerald-600 mb-2 drop-shadow-sm">PETUALANGAN TEKANAN</h1>
+        <p class="text-gray-600 mb-6 text-sm sm:text-base">Bantu Si Bimo menjelajahi Alam Tekanan! Jawab pertanyaan kuis untuk mendapatkan kekuatan super!</p>
+
+        <form id="identity-form" class="space-y-4 text-left">
+            <div>
+                <label class="block text-gray-700 font-bold mb-1 text-sm">Nama Lengkap Murid:</label>
+                <input type="text" id="student-name" required placeholder="Contoh: Budi Santoso" class="w-full px-4 py-3 rounded-xl border-2 border-emerald-300 focus:border-emerald-500 focus:outline-none text-gray-800 font-bold">
+            </div>
+            <div>
+                <label class="block text-gray-700 font-bold mb-1 text-sm">Kelas:</label>
+                <select id="student-class" required class="w-full px-4 py-3 rounded-xl border-2 border-emerald-300 focus:border-emerald-500 focus:outline-none text-gray-800 font-bold">
+                    <option value="">-- Pilih Kelas --</option>
+                    <option value="9-A">IX-A</option>
+                    <option value="9-B">IX-B</option>
+                    <option value="9-C">IX-C</option>
+                    <option value="9-D">IX-D</option>
+                    <option value="9-E">IX-E</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full btn-custom bg-emerald-500 hover:bg-emerald-600 text-white font-game text-xl py-3 rounded-2xl mt-4 tracking-wide cursor-pointer">
+                MULAI PETUALANGAN 🚀
+            </button>
+        </form>
+    </div>
+
+    <!-- Game Container (Hidden initially) -->
+    <div id="game-container" class="hidden relative w-full max-w-4xl flex-col items-center">
+        <!-- Top HUD -->
+        <div class="w-full bg-white/80 backdrop-blur-md rounded-2xl p-3 mb-2 border-2 border-emerald-400 flex justify-between items-center text-sm sm:text-base font-bold shadow-md">
+            <div class="flex items-center gap-2">
+                <span class="text-emerald-700" id="hud-name">Nama: -</span>
+                <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full" id="hud-class">9-A</span>
+            </div>
+            <div class="flex gap-4">
+                <div class="text-yellow-600">🪙 Skor: <span id="hud-score">0</span></div>
+                <div class="text-red-500">❤️ Nyawa: <span id="hud-lives">3</span></div>
+            </div>
+        </div>
+
+        <!-- Canvas Frame -->
+        <div class="relative w-full aspect-[16/9] bg-sky-200 rounded-2xl border-4 border-emerald-500 overflow-hidden shadow-2xl">
+            <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+            <!-- Quiz Modal Overlay -->
+            <div id="quiz-modal" class="hidden absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-30">
+                <div class="bg-white rounded-3xl p-6 max-w-md w-full border-4 border-yellow-400 shadow-2xl transform transition-all scale-100">
+                    <div class="bg-yellow-100 text-yellow-800 font-bold px-3 py-1 rounded-full text-xs inline-block mb-2">POS KUIS TEKANAN IPA</div>
+                    <h3 id="quiz-question" class="font-bold text-gray-800 text-base sm:text-lg mb-4">Pertanyaan Kuis...</h3>
+                    <div id="quiz-options" class="space-y-2 mb-4">
+                        <!-- Options injected dynamically -->
+                    </div>
+                    <div id="quiz-feedback" class="text-center font-bold text-sm hidden"></div>
+                </div>
+            </div>
+
+            <!-- Game Over / Victory Overlay -->
+            <div id="status-modal" class="hidden absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center p-4 z-40 text-center">
+                <h2 id="status-title" class="text-4xl font-game text-white mb-2">SELAMAT!</h2>
+                <p id="status-desc" class="text-white text-lg mb-6">Kamu telah menuntaskan Petualangan Tekanan!</p>
+                <button id="btn-certificate" class="btn-custom bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-game text-lg px-6 py-3 rounded-2xl mb-3 cursor-pointer">
+                    🏆 AMBIL SERTIFIKAT
+                </button>
+                <button id="btn-restart" class="bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2 rounded-xl text-sm cursor-pointer">
+                    🔄 Main Lagi
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Controls -->
+        <div class="w-full mt-3 grid grid-cols-2 gap-4 max-w-md mx-auto">
+            <div class="flex gap-2">
+                <button id="btn-left" class="touch-btn flex-1 py-3 rounded-2xl font-game text-2xl text-emerald-800 shadow-md">◀</button>
+                <button id="btn-right" class="touch-btn flex-1 py-3 rounded-2xl font-game text-2xl text-emerald-800 shadow-md">▶</button>
+            </div>
+            <div>
+                <button id="btn-jump" class="touch-btn w-full py-3 rounded-2xl font-game text-xl text-emerald-800 shadow-md">LOMPAT 🚀</button>
+            </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2 text-center">Kontrol Keyboard: Panah Kiri/Kanan atau A/D untuk Jalan, Panah Atas/Spasi untuk Lompat.</p>
+    </div>
+
+    <!-- Certificate View (Hidden) -->
+    <div id="certificate-screen" class="hidden w-full max-w-3xl game-card rounded-3xl p-6 sm:p-10 my-auto text-center z-20">
+        <div id="certificate-content" class="bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-8 rounded-2xl border-8 border-double border-emerald-600 relative overflow-hidden shadow-inner text-center">
+            <!-- Decorative Border Icons -->
+            <div class="absolute top-2 left-2 text-2xl">🌱</div>
+            <div class="absolute top-2 right-2 text-2xl">🧪</div>
+            <div class="absolute bottom-2 left-2 text-2xl">⚡</div>
+            <div class="absolute bottom-2 right-2 text-2xl">🏆</div>
+
+            <p class="text-emerald-800 font-bold tracking-widest uppercase text-sm mb-1">SERTIFIKAT KELULUSAN TUGAS IPA</p>
+            <h1 class="text-3xl sm:text-4xl font-game text-emerald-700 mb-2">PETUALANGAN TEKANAN ZAT</h1>
+            <p class="text-gray-500 text-xs sm:text-sm mb-6">Diberikan sebagai penghargaan atas pencapaian kognitif & kemampuan pemahaman sains:</p>
+
+            <div class="my-4 border-b-2 border-emerald-200 pb-2">
+                <h2 id="cert-name" class="text-2xl sm:text-3xl font-bold text-gray-800 underline decoration-emerald-500 decoration-wavy">NAMA SISWA</h2>
+                <p id="cert-class" class="text-emerald-600 font-bold mt-1">Kelas: IX</p>
+            </div>
+
+            <p class="text-gray-600 text-sm max-w-md mx-auto my-4">
+                Telah menyelesaikan petualangan interaktif platformer dan berhasil menguasai konsep <b>Tekanan Zat Padat, Tekanan Hidrostatis, Hukum Pascal, dan Tekanan Udara</b>.
+            </p>
+
+            <div class="bg-emerald-100 rounded-xl p-3 inline-block my-2 border border-emerald-300">
+                <span class="text-emerald-900 font-bold text-sm">NILAI AKHIR SKOR: </span>
+                <span id="cert-score" class="text-2xl font-game text-emerald-700">100</span>
+            </div>
+
+            <div class="mt-8 flex justify-between items-end px-4 text-xs text-gray-500">
+                <div class="text-left">
+                    <p>Tanggal: <span id="cert-date">22 Oktober 2026</span></p>
+                    <p class="font-bold text-emerald-700 mt-1">Status: LULUS & TUNTAS</p>
+                </div>
+                <div class="text-right">
+                    <div class="w-24 border-b border-gray-400 mb-1 mx-auto"></div>
+                    <p class="font-bold text-gray-700">Guru Mata Pelajaran IPA</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex flex-wrap justify-center gap-4">
+            <button id="btn-download-cert" class="btn-custom bg-emerald-500 hover:bg-emerald-600 text-white font-game text-lg px-6 py-3 rounded-2xl cursor-pointer">
+                📥 UNDUH SERTIFIKAT (PNG)
+            </button>
+            <button id="btn-back-main" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold px-6 py-3 rounded-2xl text-base cursor-pointer">
+                🏠 Kembali ke Menu
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-gray-500 my-2">
+        Gim Pembelajaran IPA SMP Kelas 9 - Materi Tekanan &copy; 2026
+    </footer>
+
+    <!-- HTML2Canvas CDN for Certificate Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        // --- SOUND EFFECTS ENGINE (Web Audio API) ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            playTone(freq, type, duration) {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+            coin() { this.playTone(800, 'sine', 0.15); }
+            jump() { this.playTone(400, 'square', 0.2); }
+            correct() { 
+                this.playTone(523, 'sine', 0.1); 
+                setTimeout(() => this.playTone(659, 'sine', 0.1), 100);
+                setTimeout(() => this.playTone(783, 'sine', 0.2), 200);
+            }
+            wrong() { this.playTone(180, 'sawtooth', 0.3); }
+            win() {
+                const notes = [400, 500, 600, 800];
+                notes.forEach((n, i) => setTimeout(() => this.playTone(n, 'triangle', 0.2), i * 150));
+            }
+        }
+        const sound = new SoundEngine();
+
+        // --- KUMPULAN SOAL IPA MATERI TEKANAN ---
+        const quizBank = [
+            {
+                q: "Faktor-faktor apa saja yang mempengaruhi besarnya tekanan pada zat padat?",
+                options: [
+                    "Gaya tekan dan luas bidang tekan",
+                    "Gaya tekan dan volume benda",
+                    "Massa jenis dan kedalaman",
+                    "Suhu dan volume benda"
+                ],
+                answer: 0,
+                explain: "Tekanan (P = F / A) berbanding lurus dengan Gaya (F) dan berbanding terbalik dengan Luas bidang (A)."
+            },
+            {
+                q: "Mengapa ayam lebih sulit berjalan di tanah berlumpur dibandingkan bebek?",
+                options: [
+                    "Kaki bebek lebih berat",
+                    "Kaki bebek memiliki selaput sehingga luas bidangnya besar (tekanan kecil)",
+                    "Ayam memiliki gaya tekan lebih besar",
+                    "Kaki ayam lebih lebar daripada bebek"
+                ],
+                answer: 1,
+                explain: "Kaki bebek berlapuis selaput membuat luas alas bidang tekan (A) lebih besar, sehingga tekanannya (P) ke lumpur lebih kecil."
+            },
+            {
+                q: "Pada tekanan hidrostatis (zat cair), semakin dalam posisi suatu benda dari permukaan, maka tekanannya akan...",
+                options: [
+                    "Semakin kecil",
+                    "Tetap sama",
+                    "Semakin besar",
+                    "Menjadi nol"
+                ],
+                answer: 2,
+                explain: "Rumus Tekanan Hidrostatis (Ph = ρ.g.h). Semakin besar kedalaman (h), semakin besar tekanannya."
+            },
+            {
+                q: "Prinsip kerja alat dongkrak hidrolik memanfaatkan hukum...",
+                options: [
+                    "Hukum Archimedes",
+                    "Hukum Pascal",
+                    "Hukum Boyles",
+                    "Hukum Newton"
+                ],
+                answer: 1,
+                explain: "Hukum Pascal menyatakan bahwa tekanan yang diberikan pada zat cair dalam ruang tertutup diteruskan ke segala arah sama besar."
+            },
+            {
+                q: "Alat yang digunakan untuk mengukur tekanan udara luar adalah...",
+                options: [
+                    "Manometer",
+                    "Termometer",
+                    "Barometer",
+                    "Higrometer"
+                ],
+                answer: 2,
+                explain: "Barometer adalah alat khusus untuk mengukur tekanan udara/atmosfer."
+            }
+        ];
+
+        // --- GAME STATE VARIABLES ---
+        let studentData = { name: "", class: "", score: 0 };
+        let lives = 3;
+        let score = 0;
+        let currentQuestionIndex = 0;
+        let isGameRunning = false;
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Setup internal canvas resolution
+        canvas.width = 800;
+        canvas.height = 450;
+
+        // Player Attributes
+        const player = {
+            x: 50,
+            y: 300,
+            width: 32,
+            height: 48,
+            vx: 0,
+            vy: 0,
+            speed: 4,
+            jumpStrength: -11,
+            grounded: false,
+            color: '#10B981',
+            direction: 'right'
+        };
+
+        // Camera Offset for scrolling
+        let cameraX = 0;
+        const levelWidth = 2400;
+
+        // Game World Entities
+        let platforms = [];
+        let coins = [];
+        let checkpoints = [];
+        let hazards = [];
+
+        // Controls
+        const keys = { left: false, right: false, jump: false };
+
+        function initLevel() {
+            platforms = [
+                // Ground platforms
+                { x: 0, y: 400, w: 700, h: 50 },
+                { x: 780, y: 400, w: 600, h: 50 },
+                { x: 1450, y: 400, w: 950, h: 50 },
+
+                // Elevated platforms
+                { x: 200, y: 300, w: 120, h: 20 },
+                { x: 380, y: 240, w: 120, h: 20 },
+                { x: 550, y: 310, w: 100, h: 20 },
+
+                { x: 880, y: 300, w: 140, h: 20 },
+                { x: 1100, y: 220, w: 120, h: 20 },
+                { x: 1280, y: 310, w: 100, h: 20 },
+
+                { x: 1550, y: 300, w: 120, h: 20 },
+                { x: 1750, y: 230, w: 140, h: 20 },
+                { x: 1980, y: 300, w: 120, h: 20 },
+            ];
+
+            // Hazard pits
+            hazards = [
+                { x: 700, y: 430, w: 80, h: 20 },
+                { x: 1380, y: 430, w: 70, h: 20 }
+            ];
+
+            // Coins
+            coins = [
+                { x: 230, y: 260, taken: false },
+                { x: 410, y: 200, taken: false },
+                { x: 600, y: 360, taken: false },
+                { x: 920, y: 260, taken: false },
+                { x: 1140, y: 180, taken: false },
+                { x: 1600, y: 260, taken: false },
+                { x: 1800, y: 190, taken: false }
+            ];
+
+            // Pos Kuis (Checkpoints)
+            checkpoints = [
+                { x: 500, y: 350, w: 40, h: 50, qIndex: 0, cleared: false },
+                { x: 1000, y: 350, w: 40, h: 50, qIndex: 1, cleared: false },
+                { x: 1320, y: 260, w: 40, h: 50, qIndex: 2, cleared: false },
+                { x: 1700, y: 350, w: 40, h: 50, qIndex: 3, cleared: false },
+                { x: 2100, y: 350, w: 40, h: 50, qIndex: 4, cleared: false }
+            ];
+        }
+
+        // --- FORM SUBMISSION & NAVIGATION ---
+        document.getElementById('identity-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            studentData.name = document.getElementById('student-name').value;
+            studentData.class = document.getElementById('student-class').value;
+
+            document.getElementById('hud-name').innerText = `Nama: ${studentData.name}`;
+            document.getElementById('hud-class').innerText = studentData.class;
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+            document.getElementById('game-container').classList.add('flex');
+
+            startNewGame();
+        });
+
+        function startNewGame() {
+            lives = 3;
+            score = 0;
+            player.x = 50;
+            player.y = 300;
+            player.vx = 0;
+            player.vy = 0;
+            cameraX = 0;
+            updateHUD();
+            initLevel();
+            isGameRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-score').innerText = score;
+            document.getElementById('hud-lives').innerText = lives;
+        }
+
+        // Controls Handling
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+            if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w' || e.key === 'W') {
+                if (!keys.jump && player.grounded) {
+                    player.vy = player.jumpStrength;
+                    player.grounded = false;
+                    sound.jump();
+                }
+                keys.jump = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+            if (e.key === 'ArrowUp' || e.key === ' ' || e.key === 'w' || e.key === 'W') keys.jump = false;
+        });
+
+        // Touch buttons
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const btnJump = document.getElementById('btn-jump');
+
+        btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
+        btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); keys.left = false; });
+        btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); keys.right = true; });
+        btnRight.addEventListener('touchend', (e) => { e.preventDefault(); keys.right = false; });
+
+        btnJump.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (player.grounded) {
+                player.vy = player.jumpStrength;
+                player.grounded = false;
+                sound.jump();
+            }
+        });
+
+        // Mouse click support for touch buttons
+        btnLeft.addEventListener('mousedown', () => keys.left = true);
+        btnLeft.addEventListener('mouseup', () => keys.left = false);
+        btnRight.addEventListener('mousedown', () => keys.right = true);
+        btnRight.addEventListener('mouseup', () => keys.right = false);
+        btnJump.addEventListener('mousedown', () => {
+            if (player.grounded) {
+                player.vy = player.jumpStrength;
+                player.grounded = false;
+                sound.jump();
+            }
+        });
+
+        function updatePhysics() {
+            if (!isGameRunning) return;
+
+            // Horizontal Movement
+            if (keys.left) {
+                player.vx = -player.speed;
+                player.direction = 'left';
+            } else if (keys.right) {
+                player.vx = player.speed;
+                player.direction = 'right';
+            } else {
+                player.vx *= 0.8; // friction
+            }
+
+            // Gravity
+            player.vy += 0.55;
+
+            // Apply velocity
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // Boundary Check
+            if (player.x < 0) player.x = 0;
+
+            // Collision with Platforms
+            player.grounded = false;
+            platforms.forEach(p => {
+                if (player.x + player.width > p.x &&
+                    player.x < p.x + p.w &&
+                    player.y + player.height >= p.y &&
+                    player.y + player.height <= p.y + p.h + player.vy) {
+                    
+                    if (player.vy > 0) {
+                        player.y = p.y - player.height;
+                        player.vy = 0;
+                        player.grounded = true;
+                    }
+                }
+            });
+
+            // Falling into hazard
+            if (player.y > canvas.height + 50) {
+                handlePlayerDeath();
+            }
+
+            // Camera follow player smoothly
+            cameraX = player.x - canvas.width / 3;
+            if (cameraX < 0) cameraX = 0;
+            if (cameraX > levelWidth - canvas.width) cameraX = levelWidth - canvas.width;
+
+            // Check Coin Collection
+            coins.forEach(c => {
+                if (!c.taken && Math.abs(player.x - c.x) < 25 && Math.abs(player.y - c.y) < 30) {
+                    c.taken = true;
+                    score += 10;
+                    sound.coin();
+                    updateHUD();
+                }
+            });
+
+            // Check Checkpoints / Pos Kuis
+            checkpoints.forEach(cp => {
+                if (!cp.cleared && Math.abs(player.x - cp.x) < 30 && Math.abs(player.y - cp.y) < 40) {
+                    triggerQuiz(cp);
+                }
+            });
+
+            // Check Level Finish Condition
+            if (player.x >= levelWidth - 100) {
+                triggerVictory();
+            }
+        }
+
+        function handlePlayerDeath() {
+            lives--;
+            sound.wrong();
+            updateHUD();
+            if (lives <= 0) {
+                isGameRunning = false;
+                showStatusModal("GAME OVER", "Jangan menyerah! Pelajari kembali materi Tekanan dan coba lagi ya.", false);
+            } else {
+                // Respawn
+                player.x = Math.max(50, player.x - 200);
+                player.y = 200;
+                player.vy = 0;
+            }
+        }
+
+        function triggerQuiz(cp) {
+            isGameRunning = false;
+            currentQuestionIndex = cp.qIndex;
+            const quiz = quizBank[cp.qIndex];
+
+            const modal = document.getElementById('quiz-modal');
+            const qTitle = document.getElementById('quiz-question');
+            const qOpts = document.getElementById('quiz-options');
+            const qFb = document.getElementById('quiz-feedback');
+
+            qTitle.innerText = `${cp.qIndex + 1}. ${quiz.q}`;
+            qOpts.innerHTML = '';
+            qFb.classList.add('hidden');
+
+            quiz.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-300 rounded-xl p-3 text-sm font-bold text-gray-700 transition cursor-pointer";
+                btn.innerText = `${String.fromCharCode(65 + idx)}. ${opt}`;
+                btn.onclick = () => answerQuiz(idx, quiz.answer, quiz.explain, cp);
+                qOpts.appendChild(btn);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        function answerQuiz(selected, correct, explain, cp) {
+            const qFb = document.getElementById('quiz-feedback');
+            qFb.classList.remove('hidden');
+
+            if (selected === correct) {
+                sound.correct();
+                score += 20;
+                updateHUD();
+                qFb.className = "text-center font-bold text-sm text-emerald-600 bg-emerald-100 p-2 rounded-xl mt-2";
+                qFb.innerHTML = `✅ BENAR! +20 Skor<br><span class="text-xs font-normal text-gray-600">${explain}</span>`;
+                cp.cleared = true;
+
+                setTimeout(() => {
+                    document.getElementById('quiz-modal').classList.add('hidden');
+                    // Give super jump
+                    player.vy = -13;
+                    isGameRunning = true;
+                    requestAnimationFrame(gameLoop);
+                }, 2000);
+            } else {
+                sound.wrong();
+                qFb.className = "text-center font-bold text-sm text-red-600 bg-red-100 p-2 rounded-xl mt-2";
+                qFb.innerHTML = `❌ KURANG TEPAT!<br><span class="text-xs font-normal text-gray-600">${explain}</span>`;
+                
+                setTimeout(() => {
+                    document.getElementById('quiz-modal').classList.add('hidden');
+                    isGameRunning = true;
+                    requestAnimationFrame(gameLoop);
+                }, 2500);
+            }
+        }
+
+        function drawBackground() {
+            // Smooth Gradient Sky
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGrad.addColorStop(0, '#7dd3fc');
+            skyGrad.addColorStop(1, '#bae6fd');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Sun
+            ctx.fillStyle = '#fef08a';
+            ctx.beginPath();
+            ctx.arc(700 - cameraX * 0.1, 70, 35, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Parallax Mountains
+            ctx.fillStyle = '#86efac';
+            ctx.beginPath();
+            ctx.moveTo(0 - cameraX * 0.2, 400);
+            ctx.lineTo(200 - cameraX * 0.2, 220);
+            ctx.lineTo(450 - cameraX * 0.2, 400);
+            ctx.fill();
+
+            ctx.fillStyle = '#4ade80';
+            ctx.beginPath();
+            ctx.moveTo(300 - cameraX * 0.2, 400);
+            ctx.lineTo(550 - cameraX * 0.2, 180);
+            ctx.lineTo(800 - cameraX * 0.2, 400);
+            ctx.fill();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawBackground();
+
+            ctx.save();
+            ctx.translate(-cameraX, 0);
+
+            // Draw Platforms
+            platforms.forEach(p => {
+                // Dirt
+                ctx.fillStyle = '#b45309';
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                // Grass top
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(p.x, p.y, p.w, 8);
+            });
+
+            // Draw Hazards (Water / Pits)
+            hazards.forEach(h => {
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillRect(h.x, h.y, h.w, h.h);
+            });
+
+            // Draw Coins
+            coins.forEach(c => {
+                if (!c.taken) {
+                    ctx.fillStyle = '#eab308';
+                    ctx.beginPath();
+                    ctx.arc(c.x, c.y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ca8a04';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+
+            // Draw Checkpoints (Pos Kuis IPA)
+            checkpoints.forEach(cp => {
+                ctx.fillStyle = cp.cleared ? '#9ca3af' : '#f59e0b';
+                // Sign post structure
+                ctx.fillRect(cp.x + 15, cp.y + 15, 10, 35);
+                ctx.fillStyle = cp.cleared ? '#22c55e' : '#ef4444';
+                ctx.fillRect(cp.x, cp.y, 40, 25);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px Quicksand';
+                ctx.fillText(cp.cleared ? 'PASS' : 'SOAL', cp.x + 4, cp.y + 17);
+            });
+
+            // Finish Flag
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(levelWidth - 80, 200, 8, 200);
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(levelWidth - 72, 200);
+            ctx.lineTo(levelWidth - 20, 225);
+            ctx.lineTo(levelWidth - 72, 250);
+            ctx.fill();
+
+            // Draw Player (Bimo)
+            ctx.fillStyle = player.color;
+            // Body
+            ctx.beginPath();
+            ctx.roundRect(player.x, player.y, player.width, player.height, [10]);
+            ctx.fill();
+
+            // Face Details
+            ctx.fillStyle = '#ffffff';
+            const eyeOffset = player.direction === 'right' ? 18 : 6;
+            ctx.beginPath();
+            ctx.arc(player.x + eyeOffset, player.y + 14, 4, 0, Math.PI * 2);
+            ctx.arc(player.x + eyeOffset + 8, player.y + 14, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(player.x + eyeOffset, player.y + 14, 2, 0, Math.PI * 2);
+            ctx.arc(player.x + eyeOffset + 8, player.y + 14, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            if (!isGameRunning) return;
+            updatePhysics();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- VICTORY & CERTIFICATE HANDLERS ---
+        function triggerVictory() {
+            isGameRunning = false;
+            sound.win();
+            showStatusModal("HEBAT! KAMU LULUS!", `Skor Akhir Kamu: ${score}. Siap mengunduh sertifikat?`, true);
+        }
+
+        function showStatusModal(title, desc, isVictory) {
+            const modal = document.getElementById('status-modal');
+            document.getElementById('status-title').innerText = title;
+            document.getElementById('status-desc').innerText = desc;
+            
+            const certBtn = document.getElementById('btn-certificate');
+            if (isVictory) {
+                certBtn.classList.remove('hidden');
+            } else {
+                certBtn.classList.add('hidden');
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        document.getElementById('btn-restart').onclick = () => {
+            document.getElementById('status-modal').classList.add('hidden');
+            startNewGame();
+        };
+
+        document.getElementById('btn-certificate').onclick = () => {
+            document.getElementById('status-modal').classList.add('hidden');
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('flex');
+            
+            // Populate Certificate
+            document.getElementById('cert-name').innerText = studentData.name.toUpperCase();
+            document.getElementById('cert-class').innerText = `Kelas: ${studentData.class}`;
+            document.getElementById('cert-score').innerText = score;
+            
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('cert-date').innerText = dateStr;
+
+            document.getElementById('certificate-screen').classList.remove('hidden');
+        };
+
+        document.getElementById('btn-back-main').onclick = () => {
+            document.getElementById('certificate-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        };
+
+        // Download Certificate Image
+        document.getElementById('btn-download-cert').onclick = () => {
+            const certElement = document.getElementById('certificate-content');
+            html2canvas(certElement, {
+                scale: 2,
+                useCORS: true
+            }).then(canvas => {
+                const image = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.href = image;
+                link.download = `Sertifikat_IPA_Tekanan_${studentData.name.replace(/\s+/g, '_')}.png`;
+                link.click();
+            });
+        };
+
+        // Window Load Initialization
+        window.onload = function () {
+            // Ready state
+        };
+    </script>
+</body>
+</html>
